@@ -31,7 +31,7 @@ st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
-    html, body, .stApp, .stApp * {
+    html, body, .stApp, .stApp *:not([data-testid="stIconMaterial"]) {
         font-family: 'Quicksand', sans-serif !important;
     }
     </style>
