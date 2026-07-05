@@ -1,0 +1,62 @@
+[
+  {
+    "id": "france_capital",
+    "prompt": "The capital of France is",
+    "correct": " Paris",
+    "incorrect": " London"
+  },
+  {
+    "id": "hot_opposite",
+    "prompt": "The opposite of hot is",
+    "correct": " cold",
+    "incorrect": " warm"
+  },
+  {
+    "id": "sky_color",
+    "prompt": "The color of the clear daytime sky is",
+    "correct": " blue",
+    "incorrect": " red"
+  },
+  {
+    "id": "grass_color",
+    "prompt": "The color of grass is",
+    "correct": " green",
+    "incorrect": " blue"
+  },
+  {
+    "id": "cat_sound",
+    "prompt": "The animal that says meow is a",
+    "correct": " cat",
+    "incorrect": " dog"
+  },
+  {
+    "id": "dog_sound",
+    "prompt": "The animal that barks is a",
+    "correct": " dog",
+    "incorrect": " cat"
+  },
+  {
+    "id": "two_plus_two",
+    "prompt": "Two plus two equals",
+    "correct": " four",
+    "incorrect": " five"
+  },
+  {
+    "id": "first_month",
+    "prompt": "The first month of the year is",
+    "correct": " January",
+    "incorrect": " March"
+  },
+  {
+    "id": "largest_planet",
+    "prompt": "The largest planet in the solar system is",
+    "correct": " Jupiter",
+    "incorrect": " Mars"
+  },
+  {
+    "id": "baby_cat",
+    "prompt": "A baby cat is called a",
+    "correct": " kitten",
+    "incorrect": " puppy"
+  }
+]

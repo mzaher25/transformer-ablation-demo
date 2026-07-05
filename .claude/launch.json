@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ablation-demo",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "PYTHONPATH=src streamlit run scripts/app.py --server.headless true --server.port 8501"],
+      "port": 8501
+    }
+  ]
+}

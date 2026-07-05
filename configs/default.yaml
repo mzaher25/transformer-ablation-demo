@@ -1,0 +1,11 @@
+model_name: gpt2-small
+device: auto
+prompt_path: data/prompts.json
+output_csv: results/ablation_results.csv
+output_plot: figures/ablation_plot.png
+ablation_types:
+  - whole_layer
+  - mlp_only
+  - residual_stream
+residual_position: final
+max_examples: null

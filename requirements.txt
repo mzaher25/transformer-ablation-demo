@@ -1,0 +1,6 @@
+transformer-lens>=2.0.0
+torch>=2.1.0
+pandas>=2.0.0
+matplotlib>=3.8.0
+PyYAML>=6.0.0
+streamlit>=1.30.0
