@@ -7,7 +7,7 @@ import torch
 
 from transformer_ablation.config import load_config
 from transformer_ablation.diagram import architecture_diagram_svg
-from transformer_ablation.experiment import run_ablation_sweep, run_head_sweep
+from transformer_ablation.experiment import run_ablation_sweep, run_head_sweep, rank_induction_heads
 from transformer_ablation.hooks import make_hooks
 from transformer_ablation.metrics import generate_continuation, logit_diff_from_logits, topk_predictions
 from transformer_ablation.model import load_model
@@ -200,10 +200,24 @@ with tab2:
                 num_examples=200
             )
 
-            df = run_head_sweep(
-                model,
-                induction_examples
+            ablation_df = run_head_sweep(model, induction_examples)
+
+            attention_df = rank_induction_heads(model, induction_examples)
+
+            df.ablation_df.merge(
+                attention_df,
+                on=["layer", "head"]
+            ) # merge 
+
+            df["induction_score"] = (
+                df["drop"] * df["attention_score"]
             )
+
+            df = df.sort_values(
+                "induction_score",
+                ascending=False
+            )
+
             st.session_state["head_df"] = df
 
     if "head_df" in st.session_state:
@@ -215,18 +229,16 @@ with tab2:
             ascending=False
         )
 
-        st.dataframe(
-            df.head(20)
-        )
+        st.dataframe(df.head(20))
 
-    chart = (
-        alt.Chart(df.head(20))
-        .mark_bar()
-        .encode(
-            x=alt.X("layer:N"),
-            y=alt.Y("drop:Q"),
-            color="head:N"
+        chart = (
+            alt.Chart(df.head(20))
+            .mark_bar()
+            .encode(
+                x=alt.X("layer:N"),
+                y=alt.Y("drop:Q"),
+                color="head:N"
+            )
         )
-    )
-    st.altair_chart(chart)
+        st.altair_chart(chart)
 

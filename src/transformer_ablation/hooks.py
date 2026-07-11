@@ -41,5 +41,3 @@ def ablate_head(z, hook, head):
     z = z.clone()
     z[:, :, head, :] = 0
     return z
-
-# github.com/globalsecurepayments/anthropic-fellowship/tree/master/mech-interp
