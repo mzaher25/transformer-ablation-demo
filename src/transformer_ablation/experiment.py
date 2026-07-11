@@ -86,20 +86,21 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
     return pd.DataFrame(rows)
 
 def run_attention_sweep(model, examples, max_layers=None, max_heads=None, progress=None, stop_flag=None):
+
+    if max_layers is None:
+        max_layers = model.cfg.n_layers
+
+    if max_heads is None:
+        max_heads = model.cfg.n_heads
+
     if stop_flag and stop_flag():
-        return pd.DataFrame(rows)
-    
-    attention_scores = induction_attention_score(model, examples)
+        return pd.DataFrame()
 
-    rows = []
+    attention_df = induction_attention_score(
+        model,
+        examples,
+        max_layers=max_layers,
+        max_heads=max_heads
+    )
 
-    for layer in range(model.cfg.n_layers):
-        for head in range(model.cfg.n_heads):
-            rows.append(
-                {
-                    "layer": layer,
-                    "head": head,
-                    "attention_score": attention_scores[layer, head].item(),
-                }
-            )
-    return pd.DataFrame(rows)
+    return attention_df

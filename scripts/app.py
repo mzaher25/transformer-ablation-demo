@@ -203,7 +203,7 @@ with tab2:
         "Number of layers to test",
         min_value=1,
         max_value=model.cfg.n_layers,
-        value=model.cfg.n_layers,
+        value=None,
         step=1
     )
 
@@ -211,7 +211,7 @@ with tab2:
         "Number of heads per layer to test",
         min_value=1,
         max_value=model.cfg.n_heads,
-        value=model.cfg.n_heads,
+        value=None,
         step=1
     )
 
@@ -333,7 +333,8 @@ with tab2:
                 ),
                 color=alt.Color(
                     "head:N",
-                    title="Head"
+                    title="Head",
+                    scale=alt.Scale(range=[GOLD, PINK, "#c65a4a"])
                 )
             )
         )

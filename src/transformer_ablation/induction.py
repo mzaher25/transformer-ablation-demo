@@ -1,31 +1,53 @@
 import torch
 import random
 
+from dataclasses import dataclass
+
+@dataclass
+class InductionExample:
+    prompt: str
+    answer: str
+
 # Generate a set of prompts for testing induction behavior in the model
 def generate_induction_prompts(model, num_examples=100, seq_len=5):
+
     examples = []
+
     vocab_size = model.cfg.d_vocab
 
-    for i in range(num_examples):
-        # generate random tokens for the prompt
-        tokens = torch.randint(0, vocab_size, (seq_len,))
+    for _ in range(num_examples):
 
-        # ensure that the last token is repeated to create an induction pattern
-        repeated_token = tokens[0]
+        tokens = torch.randint(
+            0,
+            vocab_size,
+            (seq_len,)
+        )
+
+        repeat_position = random.randint(
+            0,
+            seq_len-2
+        )
+
+        repeated_token = tokens[repeat_position]
+
+        next_token = tokens[repeat_position+1]
+
 
         prompt_tokens = torch.cat(
             [
-                tokens[1:],
+                tokens,
                 repeated_token.unsqueeze(0)
             ]
         )
-        # the target is the next token in the sequence, which should be the repeated token
-        target = tokens[1]
+
 
         examples.append(
-            {
-                "tokens": prompt_tokens.unsqueeze(0),
-                "target": target
-            }
+            InductionExample(
+                prompt=model.tokenizer.decode(prompt_tokens),
+                answer=model.tokenizer.decode(
+                    next_token.unsqueeze(0)
+                )
+            )
         )
+
     return examples

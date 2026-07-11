@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 
 
 def logit_diff_from_logits(logits, correct_id: int, incorrect_id: int) -> float:
@@ -47,57 +48,88 @@ def generate_continuation(model, prompt: str, hooks=None, max_new_tokens: int = 
     return model.tokenizer.decode(output[0, tokens.shape[1]:])
 
 def induction_score(model, examples, hooks=None):
+
     scores = []
 
     for ex in examples:
+
+        tokens = model.to_tokens(ex.prompt)
+
+        answer_token = model.to_tokens(
+            ex.answer,
+            prepend_bos=False
+        )
+
+        answer_id = answer_token.item()
+
         with torch.no_grad():
+
             if hooks:
-                logits = model.run_with_hooks(ex["tokens"], fwd_hooks=hooks)
-
+                logits = model.run_with_hooks(
+                    tokens,
+                    fwd_hooks=hooks
+                )
             else:
-                logits = model(ex["tokens"])
+                logits = model(tokens)
 
-        final_logits = logits[0,-1]
+        final_logits = logits[0, -1]
 
-        target = ex["target"]
+        score = final_logits[answer_id]
 
-        scores.append(final_logits[target].item())
+        scores.append(score.item())
 
     return sum(scores) / len(scores)
 
-def induction_attention_score(model, examples):
-    n_layers = model.cfg.n_layers
-    n_heads = model.cfg.n_heads
+def induction_attention_score(model, examples, max_layers=None, max_heads=None):
 
-    scores = torch.zeros(n_layers, n_heads)
+    if max_layers is None:
+        max_layers = model.cfg.n_layers
 
-    counts = torch.zeros(n_layers, n_heads)
+    if max_heads is None:
+        max_heads = model.cfg.n_heads
 
-    for ex in examples:
-        tokens = ex["tokens"]
+    scores = {}
 
-        _, cache = model.run_with_cache(
-            tokens,
-            names_filter=lambda name: "pattern" in name 
-        )
+    for layer in range(max_layers):
+        scores[layer] = torch.zeros(max_heads)
 
-        for layer in range(n_layers):
+    for example in examples:
+
+        tokens = model.to_tokens(example.prompt)
+
+        _, cache = model.run_with_cache(tokens)
+
+        for layer in range(max_layers):
+
             pattern = cache[
                 f"blocks.{layer}.attn.hook_pattern"
             ]
 
-            # shape: batch, heads, query, key
-            #pattern = pattern[0]
-
             final_position = tokens.shape[1] - 1
-            previous_position = 0
-            pattern = pattern[:, :, final_position, previous_position]
+            previous_position = final_position - 1
 
-            # check if final token attends to the first token
-            for head in range(n_heads):
-                attention = pattern[0, :, final_position, previous_position]
+            values = pattern[
+                0,
+                :max_heads,
+                final_position,
+                previous_position
+            ]
 
-                scores[layer] += attention 
-                counts[layer, head] += 1
+            scores[layer] += values
 
-    return scores / counts
+    rows = []
+
+    for layer in scores:
+        for head in range(max_heads):
+
+            rows.append(
+                {
+                    "layer": layer,
+                    "head": head,
+                    "attention_score": float(
+                        scores[layer][head] / len(examples)
+                    )
+                }
+            )
+
+    return pd.DataFrame(rows)
