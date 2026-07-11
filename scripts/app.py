@@ -215,6 +215,8 @@ elif page == "Induction Head Ablation":
     custom_prompt = None
     custom_answer = None
     custom_position = None
+    selected_prompt = None
+    add_custom = False
 
     if prompt_source == "Random tokens":
 
@@ -228,34 +230,53 @@ elif page == "Induction Head Ablation":
 
     elif prompt_source == "Natural language":
 
-        natural_examples = load_induction_prompts("data/induction_prompts.json")
+        natural_examples = load_induction_prompts(
+            "data/induction_prompts.json"
+        )
 
         selected_prompt = st.sidebar.selectbox(
             "Choose induction prompt",
-            options=[
-                ex.prompt for ex in natural_examples
-            ]
+            options=[ex.prompt for ex in natural_examples]
         )
 
-        add_custom = st.sidebar.checkbox("Add custom prompt")
+        add_custom = st.sidebar.checkbox(
+            "Add custom prompt"
+        )
 
         if add_custom:
+            custom_prompt = st.sidebar.text_area(
+                "Custom prompt",
+                value="The cat sat on the mat. The cat"
+            )
 
-            custom_prompt = st.sidebar.text_area("Custom prompt", value="The cat sat on the mat. The cat")
-
-            custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
+            custom_answer = st.sidebar.text_input(
+                "Expected continuation",
+                value=" sat"
+            )
 
     elif prompt_source == "Custom prompt":
 
-        custom_prompt = st.sidebar.text_area("Prompt", value="The cat sat on the mat. The cat")
+        custom_prompt = st.sidebar.text_area(
+            "Prompt",
+            value="The cat sat on the mat. The cat"
+        )
 
-        custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
+        custom_answer = st.sidebar.text_input(
+            "Expected continuation",
+            value=" sat"
+        )
 
-        custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
+        custom_position = st.sidebar.number_input(
+            "Position of repeated token",
+            min_value=0,
+            value=1
+        )
 
     st.sidebar.divider()
 
-    st.sidebar.subheader("Model Sweep")
+    st.sidebar.subheader(
+        "Model Sweep"
+    )
 
     max_layers = st.sidebar.number_input(
         "Number of layers to test",
@@ -273,8 +294,45 @@ elif page == "Induction Head Ablation":
         step=1
     )
 
-    if "stop_sweep" not in st.session_state:
-        st.session_state.stop_sweep = False
+    if prompt_source == "Random tokens":
+
+        preview_examples = generate_induction_prompts(
+            model,
+            num_examples=5
+        )
+
+    elif prompt_source == "Natural language":
+
+        all_examples = load_induction_prompts(
+            "data/induction_prompts.json"
+        )
+
+        preview_examples = [
+            ex for ex in all_examples
+            if ex.prompt == selected_prompt
+        ]
+
+        if add_custom:
+            preview_examples.append(
+                InductionExample(
+                    prompt=custom_prompt,
+                    answer=custom_answer
+                )
+            )
+
+    else:
+        preview_examples = create_custom_induction_prompt(
+            custom_prompt,
+            custom_answer,
+            custom_position
+        )
+
+    st.subheader("Induction Prompt")
+
+    for ex in preview_examples[:5]:
+        st.code(
+            f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}"
+        )
 
     col1, col2 = st.columns(2)
 
@@ -302,8 +360,22 @@ elif page == "Induction Head Ablation":
 
                 elif prompt_source == "Natural language":
 
-                    induction_examples = generate_natural_prompts()
+                    all_examples = load_induction_prompts(
+                        "data/induction_prompts.json"
+                    )
 
+                    induction_examples = [
+                        ex for ex in all_examples
+                        if ex.prompt == selected_prompt
+                    ]
+
+                    if add_custom:
+                        induction_examples.append(
+                            InductionExample(
+                                prompt=custom_prompt,
+                                answer=custom_answer
+                            )
+                        )
 
                 elif prompt_source == "Custom prompt":
 
@@ -421,4 +493,3 @@ elif page == "Induction Head Ablation":
         )
 
         st.altair_chart(chart, use_container_width=True)
-

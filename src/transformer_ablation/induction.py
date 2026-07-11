@@ -20,20 +20,27 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
 
     for _ in range(num_examples):
 
+        # Need at least A B
+        if seq_len < 2:
+            raise ValueError("seq_len must be >= 2")
+
+        # Create the initial sequence
         tokens = torch.randint(
             0,
             vocab_size,
             (seq_len,)
         )
 
+        # Pick a token to repeat.
+        # Avoid the last position because it needs a next token.
         repeat_position = random.randint(
             0,
-            seq_len-2
+            seq_len - 2
         )
 
         repeated_token = tokens[repeat_position]
 
-        next_token = tokens[repeat_position+1]
+        answer_token = tokens[repeat_position + 1]
 
         prompt_tokens = torch.cat(
             [
@@ -44,9 +51,11 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
 
         examples.append(
             InductionExample(
-                prompt=model.tokenizer.decode(prompt_tokens),
+                prompt=model.tokenizer.decode(
+                    prompt_tokens
+                ),
                 answer=model.tokenizer.decode(
-                    next_token.unsqueeze(0)
+                    answer_token.unsqueeze(0)
                 ),
                 repeat_position=repeat_position
             )
