@@ -1,7 +1,7 @@
 import pandas as pd
 
 from .hooks import make_hooks, ablate_head
-from .metrics import mean_logit_diff, induction_score
+from .metrics import mean_logit_diff, induction_score, induction_attention_score
 
 
 def run_ablation_sweep(model, examples, ablation_types: list[str]) -> pd.DataFrame:
@@ -59,4 +59,20 @@ def run_head_sweep(model, induction_examples):
             )
 
             print(layer, head, baseline - score)
+    return pd.DataFrame(rows)
+
+def rank_induction_heads(model, examples):
+    attention_scores = induction_attention_score(model, examples)
+
+    rows = []
+
+    for layer in range(model.cfg.n_layers):
+        for head in range(model.cfg.n_heads):
+            rows.append(
+                {
+                    "layer": layer,
+                    "head": head,
+                    "attention_score": attention_scores[layer, head].item(),
+                }
+            )
     return pd.DataFrame(rows)
