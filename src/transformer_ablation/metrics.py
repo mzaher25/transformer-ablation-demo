@@ -105,14 +105,14 @@ def induction_attention_score(model, examples, max_layers=None, max_heads=None):
                 f"blocks.{layer}.attn.hook_pattern"
             ]
 
-            final_position = tokens.shape[1] - 1
-            previous_position = final_position - 1
+            query_position = tokens.shape[1] - 1 # final position
+            key_position = example.repeat_position # position of the repeated token
 
             values = pattern[
                 0,
                 :max_heads,
-                final_position,
-                previous_position
+                query_position,
+                key_position
             ]
 
             scores[layer] += values

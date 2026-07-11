@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class InductionExample:
     prompt: str
     answer: str
+    repeat_position: int
 
 # Generate a set of prompts for testing induction behavior in the model
 def generate_induction_prompts(model, num_examples=100, seq_len=5):
@@ -32,14 +33,12 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
 
         next_token = tokens[repeat_position+1]
 
-
         prompt_tokens = torch.cat(
             [
                 tokens,
                 repeated_token.unsqueeze(0)
             ]
         )
-
 
         examples.append(
             InductionExample(
