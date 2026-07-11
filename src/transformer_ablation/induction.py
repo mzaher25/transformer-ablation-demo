@@ -51,3 +51,38 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
         )
 
     return examples
+
+def generate_natural_prompts():
+    examples = [
+        InductionExample(
+            prompt="The cat sat on the mat. The cat",
+            answer=" sat",
+            repeat_position=1
+        ),
+        InductionExample(
+            prompt="The dog chased the ball. The dog",
+            answer=" chased",
+            repeat_position=1
+        ),
+        InductionExample(
+            prompt="Alice went to school. Alice",
+            answer=" went",
+            repeat_position=0
+        ),
+        InductionExample(
+            prompt="Paris is beautiful in spring. Paris",
+            answer=" is",
+            repeat_position=0
+        ),
+    ]
+    return examples
+
+def create_custom_induction_prompt(prompt, answer, repeat_position):
+
+    return [
+        InductionExample(
+            prompt=prompt,
+            answer=answer,
+            repeat_position=repeat_position
+        )
+    ]

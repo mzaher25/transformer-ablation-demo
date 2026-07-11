@@ -13,7 +13,7 @@ from transformer_ablation.metrics import generate_continuation, logit_diff_from_
 from transformer_ablation.model import load_model
 from transformer_ablation.plotting import plot_layer_sweep
 from transformer_ablation.prompts import build_examples
-from transformer_ablation.induction import generate_induction_prompts
+from transformer_ablation.induction import generate_induction_prompts, generate_natural_prompts, create_custom_induction_prompt
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "default.yaml"
 ABLATION_LABELS = {
@@ -64,9 +64,17 @@ model, examples, cfg = get_model_and_examples()
 n_layers = model.cfg.n_layers
 
 st.title("Transformer Ablation Demo")
-tab1, tab2 = st.tabs(["Layer Ablation", "Induction Head Ablation"])
+#tab1, tab2 = st.tabs(["Layer Ablation", "Induction Head Ablation"])
 
-with tab1:
+page = st.sidebar.radio(
+    "Demo",
+    [
+        "Layer Ablation",
+        "Induction Head Ablation"
+    ]
+)
+
+if page == "Layer Ablation":
     st.caption(
     f"{cfg.model_name} — watch next-token predictions and generated text shift as you ablate "
     "layers, MLP blocks, or the residual stream."
@@ -185,11 +193,41 @@ with tab1:
         plot_layer_sweep(df, cfg.output_plot)
         st.download_button("Download CSV", df.to_csv(index=False), file_name="ablation_results.csv")
 
-with tab2:
+elif page == "Induction Head Ablation":
+    st.sidebar.header("Induction Head Controls")
 
-    st.header("Induction Head Detection")
+    prompt_source = st.sidebar.radio(
+        "Prompt source",
+        [
+            "Random tokens",
+            "Natural language",
+            "Custom prompt"
+        ]
+    )
 
-    st.subheader("Experiment Controls")
+
+    custom_prompt = None
+    custom_answer = None
+    custom_position = None
+
+
+    if prompt_source == "Custom prompt":
+
+        custom_prompt = st.sidebar.text_area(
+            "Prompt",
+            value="The cat sat on the mat. The cat"
+        )
+
+        custom_answer = st.sidebar.text_input(
+            "Expected continuation",
+            value=" sat"
+        )
+
+        custom_position = st.sidebar.number_input(
+            "Position of repeated token",
+            min_value=0,
+            value=1
+        )
 
     num_examples = st.number_input(
         "Number of induction examples",
@@ -234,10 +272,33 @@ with tab2:
                 "Testing attention heads..."
             ):
 
-                induction_examples = generate_induction_prompts(
-                    model,
-                    num_examples=num_examples
-                )
+                if prompt_source == "Random tokens":
+
+                    induction_examples = generate_induction_prompts(
+                        model,
+                        num_examples=num_examples
+                    )
+
+
+                elif prompt_source == "Natural language":
+
+                    induction_examples = generate_natural_prompts()
+
+
+                elif prompt_source == "Custom prompt":
+
+                    induction_examples = create_custom_induction_prompt(
+                        custom_prompt,
+                        custom_answer,
+                        custom_position
+                    )
+
+                st.subheader("Testing examples")
+
+                for ex in induction_examples[:5]:
+                    st.code(
+                        f"Prompt: {ex.prompt}\nAnswer: {ex.answer}"
+                    )
 
                 ablation_df = run_head_sweep(
                     model,
