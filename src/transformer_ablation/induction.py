@@ -45,7 +45,8 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
                 prompt=model.tokenizer.decode(prompt_tokens),
                 answer=model.tokenizer.decode(
                     next_token.unsqueeze(0)
-                )
+                ),
+                repeat_position=repeat_position
             )
         )
 
