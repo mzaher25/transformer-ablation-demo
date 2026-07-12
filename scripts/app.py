@@ -230,53 +230,28 @@ elif page == "Induction Head Ablation":
 
     elif prompt_source == "Natural language":
 
-        natural_examples = load_induction_prompts(
-            "data/induction_prompts.json"
-        )
+        natural_examples = load_induction_prompts("data/induction.json")
 
-        selected_prompt = st.sidebar.selectbox(
-            "Choose induction prompt",
-            options=[ex.prompt for ex in natural_examples]
-        )
+        selected_prompt = st.sidebar.selectbox("Choose induction prompt", options=[ex.prompt for ex in natural_examples])
 
-        add_custom = st.sidebar.checkbox(
-            "Add custom prompt"
-        )
+        add_custom = st.sidebar.checkbox("Add custom prompt")
 
         if add_custom:
-            custom_prompt = st.sidebar.text_area(
-                "Custom prompt",
-                value="The cat sat on the mat. The cat"
-            )
+            custom_prompt = st.sidebar.text_area("Custom prompt", value="The cat sat on the mat. The cat")
 
-            custom_answer = st.sidebar.text_input(
-                "Expected continuation",
-                value=" sat"
-            )
+            custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
 
     elif prompt_source == "Custom prompt":
 
-        custom_prompt = st.sidebar.text_area(
-            "Prompt",
-            value="The cat sat on the mat. The cat"
-        )
+        custom_prompt = st.sidebar.text_area("Prompt", value="The cat sat on the mat. The cat")
 
-        custom_answer = st.sidebar.text_input(
-            "Expected continuation",
-            value=" sat"
-        )
+        custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
 
-        custom_position = st.sidebar.number_input(
-            "Position of repeated token",
-            min_value=0,
-            value=1
-        )
+        custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
 
     st.sidebar.divider()
 
-    st.sidebar.subheader(
-        "Model Sweep"
-    )
+    st.sidebar.subheader("Model Sweep")
 
     max_layers = st.sidebar.number_input(
         "Number of layers to test",
@@ -296,16 +271,11 @@ elif page == "Induction Head Ablation":
 
     if prompt_source == "Random tokens":
 
-        preview_examples = generate_induction_prompts(
-            model,
-            num_examples=5
-        )
+        preview_examples = generate_induction_prompts(model, num_examples=5)
 
     elif prompt_source == "Natural language":
 
-        all_examples = load_induction_prompts(
-            "data/induction_prompts.json"
-        )
+        all_examples = load_induction_prompts("data/induction.json")
 
         preview_examples = [
             ex for ex in all_examples
@@ -321,18 +291,12 @@ elif page == "Induction Head Ablation":
             )
 
     else:
-        preview_examples = create_custom_induction_prompt(
-            custom_prompt,
-            custom_answer,
-            custom_position
-        )
+        preview_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
 
     st.subheader("Induction Prompt")
 
     for ex in preview_examples[:5]:
-        st.code(
-            f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}"
-        )
+        st.code(f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}")
 
     col1, col2 = st.columns(2)
 
@@ -346,23 +310,16 @@ elif page == "Induction Head Ablation":
 
             st.session_state.stop_sweep = False
 
-            with st.spinner(
-                "Testing attention heads..."
-            ):
+            with st.spinner("Testing attention heads..."):
 
                 if prompt_source == "Random tokens":
 
-                    induction_examples = generate_induction_prompts(
-                        model,
-                        num_examples=num_examples
-                    )
+                    induction_examples = generate_induction_prompts(model, num_examples=num_examples)
 
 
                 elif prompt_source == "Natural language":
 
-                    all_examples = load_induction_prompts(
-                        "data/induction_prompts.json"
-                    )
+                    all_examples = load_induction_prompts("data/induction.json")
 
                     induction_examples = [
                         ex for ex in all_examples
@@ -378,19 +335,12 @@ elif page == "Induction Head Ablation":
                         )
 
                 elif prompt_source == "Custom prompt":
-
-                    induction_examples = create_custom_induction_prompt(
-                        custom_prompt,
-                        custom_answer,
-                        custom_position
-                    )
+                    induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
 
                 st.subheader("Testing examples")
 
                 for ex in induction_examples[:5]:
-                    st.code(
-                        f"Prompt: {ex.prompt}\nAnswer: {ex.answer}"
-                    )
+                    st.code(f"Prompt: {ex.prompt}\nAnswer: {ex.answer}")
 
                 ablation_df = run_head_sweep(
                     model,
@@ -403,45 +353,30 @@ elif page == "Induction Head Ablation":
                 )
 
                 if st.session_state.stop_sweep:
-                    st.warning(
-                        "Sweep stopped!"
-                    )
+                    st.warning("Sweep stopped!")
                     st.stop()
 
                 attention_df = run_attention_sweep(
-                    model,
-                    induction_examples,
-                    max_layers=max_layers,
-                    max_heads=max_heads,
+                    model, 
+                    induction_examples, 
+                    max_layers=max_layers, 
+                    max_heads=max_heads, 
                     stop_flag=lambda:
                         st.session_state.stop_sweep,
                     progress=update_progress
                 )
 
                 if st.session_state.stop_sweep:
-                    st.warning(
-                        "Sweep stopped!"
-                    )
+                    st.warning("Sweep stopped!")
                     st.stop()
 
                 df = ablation_df.merge(
                     attention_df,
-                    on=[
-                        "layer",
-                        "head"
-                    ]
+                    on=["layer", "head"]
                 )
 
-                df["induction_score"] = (
-                    df["drop"]
-                    *
-                    df["attention_score"]
-                )
-
-                df = df.sort_values(
-                    "induction_score",
-                    ascending=False
-                )
+                df["induction_score"] = (df["drop"] * df["attention_score"])
+                df = df.sort_values("induction_score", ascending=False)
 
                 st.session_state["head_df"] = df
 
@@ -453,13 +388,8 @@ elif page == "Induction Head Ablation":
     if "head_df" in st.session_state:
 
         df = st.session_state["head_df"]
+        df = df.sort_values("drop", ascending=False)
 
-        df = df.sort_values(
-            "drop",
-            ascending=False
-        )
-
-        #st.dataframe(df.head(20))
         st.dataframe(
             df[
                 [
@@ -473,26 +403,14 @@ elif page == "Induction Head Ablation":
         )
 
         plot_df = df.head(20).copy()
-        plot_df["Head"] = (
-            "L"
-            + plot_df["layer"].astype(str)
-            + "H"
-            + plot_df["head"].astype(str)
-        )
+        plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
 
         chart = (
             alt.Chart(plot_df)
             .mark_bar()
             .encode(
-                x=alt.X(
-                    "Head:N",
-                    sort="-y",
-                    title="Attention Head"
-                ),
-                y=alt.Y(
-                    "induction_score:Q",
-                    title="Induction Score"
-                ),
+                x=alt.X("Head:N", sort="-y", title="Attention Head"),
+                y=alt.Y("induction_score:Q", title="Induction Score"),
                 color=alt.Color(
                     "layer:N",
                     title="Layer",
