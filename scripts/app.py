@@ -227,6 +227,7 @@ elif page == "Induction Head Ablation":
             value=50,
             step=5
         )
+        st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
 
     elif prompt_source == "Natural language":
 
@@ -286,22 +287,22 @@ elif page == "Induction Head Ablation":
             preview_examples.append(
                 InductionExample(
                     prompt=custom_prompt,
-                    answer=custom_answer
+                    answer=custom_answer,
+                    repeat_position=1
                 )
             )
 
     else:
         preview_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
 
-    st.subheader("Induction Prompt")
-
+    st.subheader("Induction Prompt Preview")
     for ex in preview_examples[:5]:
         st.code(f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Find induction heads"):
+        if st.button("Find induction heads", type="primary"):
 
             progress_bar = st.progress(0, text="Starting...")
             
@@ -337,10 +338,7 @@ elif page == "Induction Head Ablation":
                 elif prompt_source == "Custom prompt":
                     induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
 
-                st.subheader("Testing examples")
-
-                for ex in induction_examples[:5]:
-                    st.code(f"Prompt: {ex.prompt}\nAnswer: {ex.answer}")
+                st.subheader("Results:")
 
                 ablation_df = run_head_sweep(
                     model,
@@ -370,10 +368,7 @@ elif page == "Induction Head Ablation":
                     st.warning("Sweep stopped!")
                     st.stop()
 
-                df = ablation_df.merge(
-                    attention_df,
-                    on=["layer", "head"]
-                )
+                df = ablation_df.merge(attention_df, on=["layer", "head"])
 
                 df["induction_score"] = (df["drop"] * df["attention_score"])
                 df = df.sort_values("induction_score", ascending=False)
@@ -404,6 +399,16 @@ elif page == "Induction Head Ablation":
 
         plot_df = df.head(20).copy()
         plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
+
+        with st.expander("Drop"):
+                st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated")
+        with st.expander("Attention Score"):
+            st.write("Measures how strongly a head attends from a repeated token back to its previous occurrence")
+        with st.expander("Induction Score"):
+            st.write("Computed as:\n\n"
+                    "**Induction Score = Ablation Drop * Attention Score**\n\n"
+                     "This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
+
 
         chart = (
             alt.Chart(plot_df)

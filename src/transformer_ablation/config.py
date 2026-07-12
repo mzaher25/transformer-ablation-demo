@@ -43,4 +43,4 @@ def _resolve(root: Path, path_value: str) -> Path:
 class InductionExample:
     prompt: str
     answer: str
-    repeat_position: int
+    repeat_position: int = None
