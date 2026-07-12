@@ -5,12 +5,6 @@ import json
 from pathlib import Path
 from dataclasses import dataclass
 
-@dataclass
-class InductionExample:
-    prompt: str
-    answer: str
-    repeat_position: int
-
 # Generate a set of prompts for testing induction behavior in the model
 def generate_induction_prompts(model, num_examples=100, seq_len=5):
 
