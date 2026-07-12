@@ -3,7 +3,7 @@ import random
 import json
 
 from pathlib import Path
-from dataclasses import dataclass
+from config import InductionExample
 
 # Generate a set of prompts for testing induction behavior in the model
 def generate_induction_prompts(model, num_examples=100, seq_len=5):
