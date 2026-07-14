@@ -6,6 +6,12 @@
     "incorrect": " London"
   },
   {
+    "id":"cat" ,
+    "prompt": "The cat sat on the mat. The cat",
+    "correct": " sat on the mat.",
+    "incorrect": " ran"
+  },
+  {
     "id": "hot_opposite",
     "prompt": "The opposite of hot is",
     "correct": " cold",
