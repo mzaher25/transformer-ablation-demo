@@ -121,8 +121,3 @@ data/prompts.json
 
 Each correct and incorrect answer should be one token under the model tokenizer. The script skips examples where this is not true.
 
-## Resume framing
-
-```text
-Developed a mechanistic interpretability project using TransformerLens and PyTorch to causally evaluate GPT-2 Small components by ablating full transformer layers, MLP blocks, and residual stream activations. Quantified component importance using changes in correct-vs-incorrect token logit differences and visualized layer-wise performance degradation.
-```
