@@ -201,13 +201,27 @@ if page == "Layer Ablation":
 
 elif page == "Induction Head Ablation":
 
+    if "experiments" not in st.session_state:
+        st.session_state.experiments = [
+            {
+                "source": "Random tokens",
+                "num_examples": 50,
+                "selected_prompt": None,
+                "custom_prompt": "",
+                "custom_answer": "",
+                "custom_position": 1,
+                "add_custom": False
+            }
+        ]
+
     st.sidebar.header("Induction Head Controls")
 
     prompt_source = st.sidebar.radio(
         "Prompt source",
         [
             "Random tokens",
-            "Natural language"
+            "Natural language",
+            "Custom prompt"
         ]
     )
 
@@ -241,33 +255,25 @@ elif page == "Induction Head Ablation":
 
             custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
 
-    if st.sidebar.button("Add experiment"):
+    elif prompt_source == "Custom prompt":
 
-        if prompt_source == "Random tokens":
+        custom_prompt = st.sidebar.text_area("Prompt", value="The cat sat on the mat. The cat")
 
-            num_examples = st.sidebar.number_input(
-                "Number of random induction examples",
-                min_value=5,
-                max_value=500,
-                value=50,
-                step=5
-            )
-            st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
+        custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
 
-        elif prompt_source == "Natural language":
+        custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
 
-            natural_examples = load_induction_prompts("data/induction.json")
-
-            selected_prompt = st.sidebar.selectbox("Choose induction prompt", options=[ex.prompt for ex in natural_examples])
-
-            add_custom = st.sidebar.checkbox("Add custom prompt")
-
-            if add_custom:
-                custom_prompt = st.sidebar.text_area("Custom prompt", value="The cat sat on the mat. The cat")
-
-                custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
-
-        st.sidebar.button("Add another experiment")
+    if len(st.session_state.experiemnts) < 4:
+        if st.sidebar.button("➕ Add experiment"):
+            st.session_state.experiments.append({
+                "source": "Random tokens",
+                "num_examples": 50,
+                "selected_prompt": None,
+                "custom_prompt": "",
+                "custom_answer": "",
+                "custom_position": 1,
+                "add_custom": False
+            })
 
     st.sidebar.divider()
 
