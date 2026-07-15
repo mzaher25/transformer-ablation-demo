@@ -216,260 +216,264 @@ elif page == "Induction Head Ablation":
 
     st.sidebar.header("Induction Head Controls")
 
-    prompt_source = st.sidebar.radio(
-        "Prompt source",
-        [
-            "Random tokens",
-            "Natural language",
-            "Custom prompt"
-        ]
-    )
+    for i, exp in enumerate(st.session_state.experiments):
+        st.sidebar.divider()
+        st.sidebar.subheader(f"Experiment {i+1}")
 
-    custom_prompt = None
-    custom_answer = None
-    custom_position = None
-    selected_prompt = None
-    add_custom = False
-
-    if prompt_source == "Random tokens":
-
-        num_examples = st.sidebar.number_input(
-            "Number of random induction examples",
-            min_value=5,
-            max_value=500,
-            value=50,
-            step=5
+        exp["source"] =  st.sidebar.radio(
+            "Prompt source",
+            [
+                "Random tokens",
+                "Natural language",
+                "Custom prompt"
+            ]
         )
-        st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
 
-    elif prompt_source == "Natural language":
+        custom_prompt = None
+        custom_answer = None
+        custom_position = None
+        selected_prompt = None
+        add_custom = False
 
-        natural_examples = load_induction_prompts("data/induction.json")
+        if exp["source"] == "Random tokens":
 
-        selected_prompt = st.sidebar.selectbox("Choose induction prompt", options=[ex.prompt for ex in natural_examples])
+            num_examples = st.sidebar.number_input(
+                "Number of random induction examples",
+                min_value=5,
+                max_value=500,
+                value=50,
+                step=5
+            )
+            st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
 
-        add_custom = st.sidebar.checkbox("Add custom prompt")
+        elif exp["source"] == "Natural language":
 
-        if add_custom:
-            custom_prompt = st.sidebar.text_area("Custom prompt", value="The cat sat on the mat. The cat")
+            natural_examples = load_induction_prompts("data/induction.json")
+
+            selected_prompt = st.sidebar.selectbox("Choose induction prompt", options=[ex.prompt for ex in natural_examples])
+
+            add_custom = st.sidebar.checkbox("Add custom prompt")
+
+            if add_custom:
+                custom_prompt = st.sidebar.text_area("Custom prompt", value="The cat sat on the mat. The cat")
+
+                custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
+
+        elif exp["source"] == "Custom prompt":
+
+            custom_prompt = st.sidebar.text_area("Prompt", value="The cat sat on the mat. The cat")
 
             custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
 
-    elif prompt_source == "Custom prompt":
+            custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
 
-        custom_prompt = st.sidebar.text_area("Prompt", value="The cat sat on the mat. The cat")
+        if len(st.session_state.experiemnts) < 4:
+            if st.sidebar.button("➕ Add experiment"):
+                st.session_state.experiments.append({
+                    "source": "Random tokens",
+                    "num_examples": 50,
+                    "selected_prompt": None,
+                    "custom_prompt": "",
+                    "custom_answer": "",
+                    "custom_position": 1,
+                    "add_custom": False
+                })
 
-        custom_answer = st.sidebar.text_input("Expected continuation", value=" sat")
+        st.sidebar.divider()
 
-        custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
+        st.sidebar.subheader("Model Sweep")
 
-    if len(st.session_state.experiemnts) < 4:
-        if st.sidebar.button("➕ Add experiment"):
-            st.session_state.experiments.append({
-                "source": "Random tokens",
-                "num_examples": 50,
-                "selected_prompt": None,
-                "custom_prompt": "",
-                "custom_answer": "",
-                "custom_position": 1,
-                "add_custom": False
-            })
-
-    st.sidebar.divider()
-
-    st.sidebar.subheader("Model Sweep")
-
-    max_layers = st.sidebar.number_input(
-        "Number of layers to test",
-        min_value=1,
-        max_value=model.cfg.n_layers,
-        value=model.cfg.n_layers,
-        step=1
-    )
-
-    max_heads = st.sidebar.number_input(
-        "Number of heads per layer to test",
-        min_value=1,
-        max_value=model.cfg.n_heads,
-        value=model.cfg.n_heads,
-        step=1
-    )
-
-    if prompt_source == "Random tokens":
-
-        preview_examples = generate_induction_prompts(model, num_examples=5)
-
-    elif prompt_source == "Natural language":
-
-        all_examples = load_induction_prompts("data/induction.json")
-
-        preview_examples = [
-            ex for ex in all_examples
-            if ex.prompt == selected_prompt
-        ]
-
-        if add_custom:
-            preview_examples.append(
-                InductionExample(
-                    prompt=custom_prompt,
-                    answer=custom_answer,
-                    repeat_position=1
-                )
-            )
-
-    else:
-        preview_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
-
-    st.subheader("Induction Prompt Preview")
-    for ex in preview_examples[:5]:
-        st.code(f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Find induction heads", type="primary"):
-
-            progress_bar = st.progress(0, text="Starting...")
-            
-            def update_progress(value):
-                progress_bar.progress(value, text=f"Progress: {value*100:.1f}%")
-
-            st.session_state.stop_sweep = False
-
-            with st.spinner("Testing attention heads..."):
-
-                if prompt_source == "Random tokens":
-
-                    induction_examples = generate_induction_prompts(model, num_examples=num_examples)
-
-
-                elif prompt_source == "Natural language":
-
-                    all_examples = load_induction_prompts("data/induction.json")
-
-                    induction_examples = [
-                        ex for ex in all_examples
-                        if ex.prompt == selected_prompt
-                    ]
-
-                    if add_custom:
-                        induction_examples.append(
-                            InductionExample(
-                                prompt=custom_prompt,
-                                answer=custom_answer
-                            )
-                        )
-
-                elif prompt_source == "Custom prompt":
-                    induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
-
-                st.subheader("Results:")
-
-                ablation_df = run_head_sweep(
-                    model,
-                    induction_examples,
-                    max_layers=max_layers,
-                    max_heads=max_heads,
-                    stop_flag=lambda:
-                        st.session_state.stop_sweep,
-                    progress=update_progress
-                )
-
-                if st.session_state.stop_sweep:
-                    st.warning("Sweep stopped!")
-                    st.stop()
-
-                attention_df = run_attention_sweep(
-                    model, 
-                    induction_examples, 
-                    max_layers=max_layers, 
-                    max_heads=max_heads, 
-                    stop_flag=lambda:
-                        st.session_state.stop_sweep,
-                    progress=update_progress
-                )
-
-                if st.session_state.stop_sweep:
-                    st.warning("Sweep stopped!")
-                    st.stop()
-
-                df = ablation_df.merge(attention_df, on=["layer", "head"])
-
-                df["induction_score"] = (df["drop"] * df["attention_score"])
-                df = df.sort_values("induction_score", ascending=False)
-
-                st.session_state["head_df"] = df
-
-    with col2:
-
-        if st.button("Stop experiment"):
-            st.session_state.stop_sweep = True
-
-    if "head_df" in st.session_state:
-
-        df = st.session_state["head_df"]
-        df = df.sort_values("drop", ascending=False)
-
-        st.dataframe(
-            df[
-                [
-                    "layer",
-                    "head",
-                    "drop",
-                    "attention_score",
-                    "induction_score"
-                ]
-            ].head(20)
+        max_layers = st.sidebar.number_input(
+            "Number of layers to test",
+            min_value=1,
+            max_value=model.cfg.n_layers,
+            value=model.cfg.n_layers,
+            step=1
         )
 
-        plot_df = df.head(20).copy()
-        plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
+        max_heads = st.sidebar.number_input(
+            "Number of heads per layer to test",
+            min_value=1,
+            max_value=model.cfg.n_heads,
+            value=model.cfg.n_heads,
+            step=1
+        )
 
-        with st.expander("Drop"):
-                st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated")
-        with st.expander("Attention Score"):
-            st.write("Measures how strongly a head attends from a repeated token back to its previous occurrence")
-        with st.expander("Induction Score"):
-            st.write("Computed as:\n\n"
-                    "**Induction Score = Ablation Drop * Attention Score**\n\n"
-                     "This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
+        if exp["source"] == "Random tokens":
 
+            preview_examples = generate_induction_prompts(model, num_examples=5)
 
-        chart = (
-            alt.Chart(plot_df)
-            .mark_bar()
-            .encode(
-                x=alt.X("Head:N", sort="-y", title="Attention Head"),
-                y=alt.Y("induction_score:Q", title="Induction Score"),
-                color=alt.Color(
-                    "layer:N",
-                    title="Layer",
-                    scale=alt.Scale(
-                        range=[
-                            "#AEC6CF",  # pastel blue
-                            "#FFD1DC",  # pastel pink
-                            "#CDEAC0",  # pastel green
-                            "#FFF1B6",  # pastel yellow
-                            "#D7C6F7",  # lavender
-                            "#FFDAC1",  # peach
-                            "#B5EAD7",  # mint
-                            "#E2CFC4",  # beige
-                            "#C7CEEA",  # periwinkle
-                            "#F8C8DC",  # rose
-                            "#D5ECC2",  # sage
-                            "#FDE2A7",  # light apricot
-                        ]
+        elif exp["source"] == "Natural language":
+
+            all_examples = load_induction_prompts("data/induction.json")
+
+            preview_examples = [
+                ex for ex in all_examples
+                if ex.prompt == selected_prompt
+            ]
+
+            if add_custom:
+                preview_examples.append(
+                    InductionExample(
+                        prompt=custom_prompt,
+                        answer=custom_answer,
+                        repeat_position=1
                     )
-                ),
-                tooltip=[
-                    "layer",
-                    "head",
-                    alt.Tooltip("induction_score:Q", format=".3f"),
-                    alt.Tooltip("drop:Q", format=".3f"),
-                    alt.Tooltip("attention_score:Q", format=".3f"),
-                ],
-            )
-            .properties(height=450)
-        )
+                )
 
-        st.altair_chart(chart, use_container_width=True)
+        else:
+            preview_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
+
+        st.subheader("Induction Prompt Preview")
+        for ex in preview_examples[:5]:
+            st.code(f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Find induction heads", type="primary"):
+
+                progress_bar = st.progress(0, text="Starting...")
+                
+                def update_progress(value):
+                    progress_bar.progress(value, text=f"Progress: {value*100:.1f}%")
+
+                st.session_state.stop_sweep = False
+
+                with st.spinner("Testing attention heads..."):
+
+                    if exp["source"] == "Random tokens":
+
+                        induction_examples = generate_induction_prompts(model, num_examples=num_examples)
+
+
+                    elif exp["source"] == "Natural language":
+
+                        all_examples = load_induction_prompts("data/induction.json")
+
+                        induction_examples = [
+                            ex for ex in all_examples
+                            if ex.prompt == selected_prompt
+                        ]
+
+                        if add_custom:
+                            induction_examples.append(
+                                InductionExample(
+                                    prompt=custom_prompt,
+                                    answer=custom_answer
+                                )
+                            )
+
+                    elif exp["source"] == "Custom prompt":
+                        induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
+
+                    st.subheader("Results:")
+
+                    ablation_df = run_head_sweep(
+                        model,
+                        induction_examples,
+                        max_layers=max_layers,
+                        max_heads=max_heads,
+                        stop_flag=lambda:
+                            st.session_state.stop_sweep,
+                        progress=update_progress
+                    )
+
+                    if st.session_state.stop_sweep:
+                        st.warning("Sweep stopped!")
+                        st.stop()
+
+                    attention_df = run_attention_sweep(
+                        model, 
+                        induction_examples, 
+                        max_layers=max_layers, 
+                        max_heads=max_heads, 
+                        stop_flag=lambda:
+                            st.session_state.stop_sweep,
+                        progress=update_progress
+                    )
+
+                    if st.session_state.stop_sweep:
+                        st.warning("Sweep stopped!")
+                        st.stop()
+
+                    df = ablation_df.merge(attention_df, on=["layer", "head"])
+
+                    df["induction_score"] = (df["drop"] * df["attention_score"])
+                    df = df.sort_values("induction_score", ascending=False)
+
+                    st.session_state["head_df"] = df
+
+        with col2:
+
+            if st.button("Stop experiment"):
+                st.session_state.stop_sweep = True
+
+        if "head_df" in st.session_state:
+
+            df = st.session_state["head_df"]
+            df = df.sort_values("drop", ascending=False)
+
+            st.dataframe(
+                df[
+                    [
+                        "layer",
+                        "head",
+                        "drop",
+                        "attention_score",
+                        "induction_score"
+                    ]
+                ].head(20)
+            )
+
+            plot_df = df.head(20).copy()
+            plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
+
+            with st.expander("Drop"):
+                    st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated")
+            with st.expander("Attention Score"):
+                st.write("Measures how strongly a head attends from a repeated token back to its previous occurrence")
+            with st.expander("Induction Score"):
+                st.write("Computed as:\n\n"
+                        "**Induction Score = Ablation Drop * Attention Score**\n\n"
+                        "This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
+
+
+            chart = (
+                alt.Chart(plot_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Head:N", sort="-y", title="Attention Head"),
+                    y=alt.Y("induction_score:Q", title="Induction Score"),
+                    color=alt.Color(
+                        "layer:N",
+                        title="Layer",
+                        scale=alt.Scale(
+                            range=[
+                                "#AEC6CF",  # pastel blue
+                                "#FFD1DC",  # pastel pink
+                                "#CDEAC0",  # pastel green
+                                "#FFF1B6",  # pastel yellow
+                                "#D7C6F7",  # lavender
+                                "#FFDAC1",  # peach
+                                "#B5EAD7",  # mint
+                                "#E2CFC4",  # beige
+                                "#C7CEEA",  # periwinkle
+                                "#F8C8DC",  # rose
+                                "#D5ECC2",  # sage
+                                "#FDE2A7",  # light apricot
+                            ]
+                        )
+                    ),
+                    tooltip=[
+                        "layer",
+                        "head",
+                        alt.Tooltip("induction_score:Q", format=".3f"),
+                        alt.Tooltip("drop:Q", format=".3f"),
+                        alt.Tooltip("attention_score:Q", format=".3f"),
+                    ],
+                )
+                .properties(height=450)
+            )
+
+            st.altair_chart(chart, use_container_width=True)
