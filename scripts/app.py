@@ -446,7 +446,7 @@ elif page == "Induction Head Ablation":
     if "head_df" in st.session_state:
 
         df = st.session_state["head_df"]
-        df = df.sort_values("drop", ascending=False)
+        df = df.sort_values("induction_score", ascending=False)
 
         st.dataframe(
             df[
