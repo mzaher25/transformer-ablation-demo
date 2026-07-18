@@ -27,6 +27,7 @@ ABLATION_LABELS = {
     "whole_layer": "Whole layer (attn + MLP out)",
     "mlp_only": "MLP output only",
     "residual_stream": "Residual stream (final token)",
+    "single_head": "Single attention head",
 }
 
 PINK = "#d97ba6"
@@ -108,11 +109,17 @@ if page == "Layer Ablation":
         format_func=lambda k: ABLATION_LABELS[k],
     )
     layer = st.sidebar.slider("Layer", 0, n_layers - 1, 0, disabled=(ablation_type == "none"))
+    head = st.sidebar.slider(
+        "Head", 0, model.cfg.n_heads - 1, 0, disabled=(ablation_type != "single_head")
+    )
     top_k = st.sidebar.slider("Top-k tokens to show", 3, 15, 8)
     max_new_tokens = st.sidebar.slider("Tokens to generate", 1, 20, 8)
 
-    hooks = None if ablation_type == "none" else make_hooks(ablation_type, layer)
+    head_arg = head if ablation_type == "single_head" else None
+    hooks = None if ablation_type == "none" else make_hooks(ablation_type, layer, head=head_arg)
     ablated_label = "Baseline" if ablation_type == "none" else f"{ABLATION_LABELS[ablation_type]} @ layer {layer}"
+    if ablation_type == "single_head":
+        ablated_label += f", head {head}"
 
     st.subheader("Prompt")
     st.code(prompt_text, language=None)
@@ -122,7 +129,7 @@ if page == "Layer Ablation":
         "GPT-2 Small's residual stream runs bottom (embedding) to top (logits) through every layer's "
         "attention and MLP sublayers. Red marks whatever the current selection zeroes out."
     )
-    st.markdown(architecture_diagram_svg(n_layers, layer, ablation_type), unsafe_allow_html=True)
+    st.markdown(architecture_diagram_svg(n_layers, layer, ablation_type, head=head_arg), unsafe_allow_html=True)
 
     col_base, col_ablated = st.columns(2)
 

@@ -44,7 +44,7 @@ def _circle(cx, cy, r, fill, stroke=None, opacity=1.0, stroke_width=1.5):
     return f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r}" fill="{fill}" opacity="{opacity:.2f}"{stroke_attr}/>'
 
 
-def architecture_diagram_svg(n_layers: int, selected_layer: int, ablation_type: str) -> str:
+def architecture_diagram_svg(n_layers: int, selected_layer: int, ablation_type: str, head: int | None = None) -> str:
     """Render an SVG of the transformer's residual stream + per-layer Attn/MLP blocks,
     highlighting whichever component the current sidebar selection zeroes out."""
     height = TOP_MARGIN + n_layers * LAYER_HEIGHT + BOTTOM_MARGIN
@@ -72,7 +72,7 @@ def architecture_diagram_svg(n_layers: int, selected_layer: int, ablation_type: 
         is_selected = ablation_type != "none" and i == selected_layer
         opacity = 1.0 if (is_selected or ablation_type == "none") else DIM_OPACITY
 
-        attn_ablated = is_selected and ablation_type == "whole_layer"
+        attn_ablated = is_selected and ablation_type in ("whole_layer", "single_head")
         mlp_ablated = is_selected and ablation_type in ("whole_layer", "mlp_only")
         stream_ablated = is_selected and ablation_type == "residual_stream"
 
@@ -94,7 +94,12 @@ def architecture_diagram_svg(n_layers: int, selected_layer: int, ablation_type: 
         parts.append(_circle(STREAM_X, y_attn, 4, JOIN_FILL if not attn_ablated else ABLATED_STROKE, opacity=opacity))
         parts.append(_line(STREAM_X, y_attn, BOX_X, y_attn, STREAM_COLOR, width=1.5, opacity=opacity))
         parts.append(_rect(BOX_X, y_attn - BOX_HEIGHT / 2, BOX_WIDTH, BOX_HEIGHT, attn_fill, attn_stroke, opacity=opacity))
-        label = "attn_out = 0" if attn_ablated else "Attn"
+        if not attn_ablated:
+            label = "Attn"
+        elif ablation_type == "single_head":
+            label = f"head {head} z = 0"
+        else:
+            label = "attn_out = 0"
         parts.append(
             _text(BOX_X + BOX_WIDTH / 2, y_attn + 4, label, size=11, anchor="middle",
                   fill=ABLATED_STROKE if attn_ablated else TEXT_COLOR, weight="bold" if attn_ablated else "normal",
