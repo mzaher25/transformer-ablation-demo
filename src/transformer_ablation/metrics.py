@@ -47,30 +47,40 @@ def generate_continuation(model, prompt: str, hooks=None, max_new_tokens: int = 
                 output = model.generate(tokens, max_new_tokens=max_new_tokens, do_sample=False, verbose=False)
     return model.tokenizer.decode(output[0, tokens.shape[1]:])
 
+def _group_by_token_length(model, examples):
+    """Bucket examples by tokenized prompt length so same-length prompts can be
+    batched into a single forward pass instead of one-at-a-time."""
+    groups = {}
+    for ex in examples:
+        tokens = model.to_tokens(ex.prompt)
+        groups.setdefault(tokens.shape[1], []).append((tokens, ex))
+    return groups
+
+
 def induction_score(model, examples, hooks=None):
+
+    groups = _group_by_token_length(model, examples)
 
     scores = []
 
-    for ex in examples:
-
-        tokens = model.to_tokens(ex.prompt)
-
-        answer_token = model.to_tokens(ex.answer, prepend_bos=False)
-
-        answer_id = answer_token.item()
-
-        with torch.no_grad():
+    with torch.no_grad():
+        for _, group in groups.items():
+            batch_tokens = torch.cat([tokens for tokens, _ in group], dim=0)
 
             if hooks:
-                logits = model.run_with_hooks(tokens, fwd_hooks=hooks)
+                logits = model.run_with_hooks(batch_tokens, fwd_hooks=hooks)
             else:
-                logits = model(tokens)
+                logits = model(batch_tokens)
 
-        final_logits = logits[0, -1]
+            final_logits = logits[:, -1, :]
 
-        score = final_logits[answer_id]
+            # log-prob rather than raw logit: shift-invariant, so ablations that
+            # merely offset the whole logit vector don't spuriously move the score
+            log_probs = torch.log_softmax(final_logits, dim=-1)
 
-        scores.append(score.item())
+            for i, (_, ex) in enumerate(group):
+                answer_id = model.to_tokens(ex.answer, prepend_bos=False).item()
+                scores.append(log_probs[i, answer_id].item())
 
     return sum(scores) / len(scores)
 
@@ -87,22 +97,27 @@ def induction_attention_score(model, examples, max_layers=None, max_heads=None):
     for layer in range(max_layers):
         scores[layer] = torch.zeros(max_heads)
 
-    for example in examples:
+    groups = _group_by_token_length(model, examples)
 
-        tokens = model.to_tokens(example.prompt)
+    with torch.no_grad():
+        for length, group in groups.items():
+            batch_tokens = torch.cat([tokens for tokens, _ in group], dim=0)
 
-        _, cache = model.run_with_cache(tokens)
+            _, cache = model.run_with_cache(batch_tokens)
 
-        for layer in range(max_layers):
+            query_position = length - 1 # final position
 
-            pattern = cache[f"blocks.{layer}.attn.hook_pattern"]
+            for layer in range(max_layers):
 
-            query_position = tokens.shape[1] - 1 # final position
-            key_position = example.repeat_position # position of the repeated token
+                pattern = cache[f"blocks.{layer}.attn.hook_pattern"]
 
-            values = pattern[0, :max_heads, query_position, key_position]
+                for i, (_, ex) in enumerate(group):
+                    # +1 for the prepended BOS token, +1 more to land on the token right
+                    # after the earlier occurrence (what a true induction head attends
+                    # to, to copy it)
+                    key_position = ex.repeat_position + 2
 
-            scores[layer] += values
+                    scores[layer] += pattern[i, :max_heads, query_position, key_position]
 
     rows = []
 

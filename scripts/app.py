@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 import altair as alt
@@ -18,8 +19,15 @@ from transformer_ablation.induction import (
     generate_induction_prompts,
     generate_natural_prompts,
     create_custom_induction_prompt,
-    load_induction_prompts
+    load_induction_prompts,
+    filter_valid_examples,
 )
+
+
+def set_seed(seed):
+    if seed is not None:
+        random.seed(seed)
+        torch.manual_seed(seed)
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "default.yaml"
 ABLATION_LABELS = {
@@ -223,6 +231,7 @@ elif page == "Induction Head Ablation":
     custom_position = None
     selected_prompt = None
     add_custom = False
+    seed = None
 
     if prompt_source == "Random tokens":
 
@@ -232,6 +241,14 @@ elif page == "Induction Head Ablation":
             max_value=500,
             value=50,
             step=5
+        )
+        seed = st.sidebar.number_input(
+            "Random seed",
+            min_value=0,
+            max_value=2**31 - 1,
+            value=0,
+            step=1,
+            help="Same seed reproduces the same random induction examples across runs.",
         )
         st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
 
@@ -298,6 +315,7 @@ elif page == "Induction Head Ablation":
 
     if prompt_source == "Random tokens":
 
+        set_seed(seed)
         preview_examples = generate_induction_prompts(model, num_examples=5)
 
     elif prompt_source == "Natural language":
@@ -341,6 +359,7 @@ elif page == "Induction Head Ablation":
 
                 if prompt_source == "Random tokens":
 
+                    set_seed(seed)
                     induction_examples = generate_induction_prompts(model, num_examples=num_examples)
 
 
@@ -363,6 +382,15 @@ elif page == "Induction Head Ablation":
 
                 elif prompt_source == "Custom prompt":
                     induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
+
+                induction_examples, skipped = filter_valid_examples(model, induction_examples)
+                if skipped:
+                    st.warning(
+                        f"Skipped {len(skipped)} example(s) whose expected continuation isn't a single token."
+                    )
+                if not induction_examples:
+                    st.error("No valid induction examples (expected continuation must be a single token).")
+                    st.stop()
 
                 st.subheader("Results:")
 
@@ -396,7 +424,16 @@ elif page == "Induction Head Ablation":
 
                 df = ablation_df.merge(attention_df, on=["layer", "head"])
 
-                df["induction_score"] = (df["drop"] * df["attention_score"])
+                # attention_score is already in [0, 1]; min-max normalize drop onto the
+                # same scale first so it doesn't dominate the product just because raw
+                # logit units have a much larger dynamic range
+                drop_range = df["drop"].max() - df["drop"].min()
+                if drop_range > 0:
+                    normalized_drop = (df["drop"] - df["drop"].min()) / drop_range
+                else:
+                    normalized_drop = df["drop"] * 0
+
+                df["induction_score"] = normalized_drop * df["attention_score"]
                 df = df.sort_values("induction_score", ascending=False)
 
                 st.session_state["head_df"] = df
@@ -429,11 +466,11 @@ elif page == "Induction Head Ablation":
         with st.expander("Drop"):
                 st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated")
         with st.expander("Attention Score"):
-            st.write("Measures how strongly a head attends from a repeated token back to its previous occurrence")
+            st.write("Measures how strongly a head attends, from a repeated token, back to the token that came right after its earlier occurrence — the token it would need to copy to complete the induction pattern")
         with st.expander("Induction Score"):
             st.write("Computed as:\n\n"
-                    "**Induction Score = Ablation Drop * Attention Score**\n\n"
-                     "This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
+                    "**Induction Score = min-max-normalized Drop * Attention Score**\n\n"
+                     "Drop is normalized to [0, 1] first since it's in raw logit units with a much larger range than Attention Score, so it doesn't swamp the product. This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
 
 
         chart = (

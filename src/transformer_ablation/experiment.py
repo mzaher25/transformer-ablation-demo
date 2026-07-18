@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .hooks import make_hooks, ablate_head
+from .hooks import make_hooks, single_head_hooks
 from .metrics import mean_logit_diff, induction_score, induction_attention_score
 
 
@@ -55,13 +55,7 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
                 print("Stopping head sweep")
                 return pd.DataFrame(rows)
 
-            hooks = [
-                (
-                    "blocks.%d.attn.hook_z" % layer,
-                    lambda z, hook, h=head:
-                        ablate_head(z, hook, h)
-                )
-            ]
+            hooks = single_head_hooks(layer, head)
 
             score = induction_score(
                 model,
