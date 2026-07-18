@@ -17,15 +17,16 @@ transformer_ablation_module/
 ├── configs/
 │   └── default.yaml
 ├── data/
-│   └── prompts.json
+│   ├── prompts.json
 │   └── induction.json
-│   └── induction_prompts.json
 ├── scripts/
-│   └── run_ablation.py
+│   ├── run_ablation.py
+│   └── app.py
 ├── src/
 │   └── transformer_ablation/
 │       ├── cli.py
 │       ├── config.py
+│       ├── diagram.py
 │       ├── experiment.py
 │       ├── hooks.py
 │       ├── induction.py
@@ -75,10 +76,31 @@ From the project root:
 PYTHONPATH=src streamlit run scripts/app.py
 ```
 
-Pick a prompt, an ablation type, and a layer in the sidebar to see the model's top next-token
-predictions, generated continuation, and (for the built-in prompts) the correct-vs-incorrect
-logit difference shift side-by-side with the unablated baseline. A "Run full sweep" button
-reproduces the same layer-by-layer sweep as `scripts/run_ablation.py`, with an interactive chart.
+The sidebar's **Demo** selector switches between two pages:
+
+### Layer Ablation
+
+Pick a prompt, an ablation type, and a layer (plus a head, for `single_head`) to see the
+model's top next-token predictions, generated continuation, and an architecture diagram
+highlighting exactly what got zeroed, side-by-side with the unablated baseline. For the
+built-in prompts you also get the correct-vs-incorrect logit difference shift. A "Run full
+sweep" button reproduces the same layer-by-layer sweep as `scripts/run_ablation.py`, with an
+interactive chart.
+
+### Induction Head Ablation
+
+Searches for GPT-2 Small's induction heads: pick a prompt source (randomly generated
+repeated-token sequences or natural-language examples from `data/induction.json`, with an
+option to add your own), then run a sweep across every layer/head combination. For each head
+this computes:
+
+- **Drop** — how much ablating that head hurts induction performance
+- **Attention score** — how strongly the head attends from a repeated token back to its
+  earlier occurrence
+- **Induction score** — `drop * attention_score`, combining both signals to surface heads
+  that are both causally important and attention-pattern-consistent with induction
+
+Results are ranked and charted per layer/head.
 
 ## Outputs
 
@@ -114,13 +136,31 @@ Zeros the residual stream at the final token position before a layer:
 resid_pre(layer, final_position) = 0
 ```
 
+### `single_head`
+
+Zeros one attention head's output (before it's combined into `attn_out`) at a layer —
+available in the interactive demo only:
+
+```text
+z(layer, head) = 0
+```
+
 ## Edit prompts
 
-Add or change examples in:
+Add or change layer/MLP/residual-stream ablation examples in:
 
 ```text
 data/prompts.json
 ```
 
 Each correct and incorrect answer should be one token under the model tokenizer. The script skips examples where this is not true.
+
+Add or change natural-language induction examples (used by the Induction Head Ablation page) in:
+
+```text
+data/induction.json
+```
+
+Each entry needs a `prompt`, the expected `answer` continuation, and `repeat_position` (the
+index of the token being repeated).
 
