@@ -247,6 +247,14 @@ elif page == "Induction Head Ablation":
                 step=5,
                 key=f"num_examples_{i}"
             )
+            if len(st.session_state.experiments) > 1:
+                if st.sidebar.button(
+                    "❌ Remove",
+                    key=f"remove_{i}"
+                ):
+                    st.session_state.experiments.pop(i)
+                    st.rerun()
+
             st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
 
         elif exp["source"] == "Natural language":
@@ -272,6 +280,14 @@ elif page == "Induction Head Ablation":
                 key=f"add_custom_{i}"
             )
 
+            if len(st.session_state.experiments) > 1:
+                if st.sidebar.button(
+                    "❌ Remove",
+                    key=f"remove_{i}"
+                ):
+                    st.session_state.experiments.pop(i)
+                    st.rerun()
+
             if exp["add_custom"]:
 
                 exp["custom_prompt"] = st.sidebar.text_area(
@@ -285,6 +301,14 @@ elif page == "Induction Head Ablation":
                     value=exp["custom_answer"],
                     key=f"custom_answer_{i}"
                 )
+
+            if len(st.session_state.experiments) > 1:
+                if st.sidebar.button(
+                    "❌ Remove",
+                    key=f"remove_{i}"
+                ):
+                    st.session_state.experiments.pop(i)
+                    st.rerun()
 
             if add_custom:
                 exp["custom_prompt"] = st.sidebar.text_area(
