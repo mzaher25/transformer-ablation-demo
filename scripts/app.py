@@ -271,13 +271,12 @@ elif page == "Induction Head Ablation":
     with col1:
         if st.button("Find induction heads", type="primary"):
             overall = len(st.session_state.experiments) * max_layers * max_heads
-            completed = 0
+            st.session_state.completed = 0
             progress_bar = st.progress(0, text="Starting...")
             
             def update_progress(value):
-                completed += 1
-                #progress_bar.progress(value, text=f"Progress: {value*100:.1f}%")
-                progress_bar.progress(completed / overall, text=f"Experiment {idx+1}/{len(st.session_state.experiments)}")
+                st.session_state.completed += 1
+                progress_bar.progress(st.session_state.completed / overall, text=f"Experiment {idx+1}/{len(st.session_state.experiments)}")
 
             st.session_state.stop_sweep = False
 

@@ -57,7 +57,7 @@ def induction_score(model, examples, hooks=None):
     if pad_id is None:
         pad_id = model.tokenizer.eos_token_id
 
-    lengths = (tokens != pad_id).sum(dum=1)
+    lengths = (tokens != pad_id).sum(dim=1)
 
     answer_ids = torch.tensor([model.to_tokens(ex.answer, prepend_bos=False).item() for ex in examples])
 
