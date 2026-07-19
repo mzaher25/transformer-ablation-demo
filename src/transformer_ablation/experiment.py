@@ -38,10 +38,8 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
     if max_heads is None:
         max_heads = model.cfg.n_heads
 
-    baseline = induction_score(
-        model,
-        examples
-    )
+    baseline = induction_score(model, examples)
+    print(f"Baseline: {baseline}")
 
     rows=[]
     completed = 0
@@ -63,11 +61,7 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
                 )
             ]
 
-            score = induction_score(
-                model,
-                examples,
-                hooks=hooks
-            )
+            score = induction_score(model, examples, hooks=hooks)
 
             drop = baseline - score
 
@@ -96,11 +90,6 @@ def run_attention_sweep(model, examples, max_layers=None, max_heads=None, progre
     if stop_flag and stop_flag():
         return pd.DataFrame()
 
-    attention_df = induction_attention_score(
-        model,
-        examples,
-        max_layers=max_layers,
-        max_heads=max_heads
-    )
+    attention_df = induction_attention_score(model, examples, max_layers=max_layers, max_heads=max_heads)
 
     return attention_df
