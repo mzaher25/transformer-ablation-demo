@@ -39,7 +39,6 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
         max_heads = model.cfg.n_heads
 
     baseline = induction_score(model, examples)
-    print(f"Baseline: {baseline}")
 
     rows=[]
     completed = 0
@@ -64,6 +63,12 @@ def run_head_sweep(model, examples, max_layers=None,max_heads=None, progress=Non
             score = induction_score(model, examples, hooks=hooks)
 
             drop = baseline - score
+            print(
+                f"Layer {layer} Head {head}: "
+                f"baseline={baseline:.4f}, "
+                f"score={score:.4f}, "
+                f"drop={drop:.4f}"
+            )
 
             rows.append(
                 {

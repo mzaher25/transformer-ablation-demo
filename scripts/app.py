@@ -252,7 +252,7 @@ elif page == "Induction Head Ablation":
 
             natural_examples = load_induction_prompts("data/induction.json")
 
-            prompts = [ex.prompt for ex in natural_examples]
+            prompts = [ex for ex in natural_examples if ex.prompt == exp["selected_prompt"]]
 
             default = 0
             if exp["selected_prompt"] in prompts:
@@ -402,57 +402,57 @@ elif page == "Induction Head Ablation":
         if st.button("Stop experiment"):
             st.session_state.stop_sweep = True
 
-        if "results" in st.session_state:
+    if "results" in st.session_state:
 
-            for name, df in st.session_state["results"].items():
+        for name, df in st.session_state["results"].items():
 
-                st.header(name)
-                st.dataframe(df.head(20))
+            st.header(name)
+            st.dataframe(df.head(20))
 
-                plot_df = df.head(20).copy()
+            plot_df = df.head(20).copy()
 
-                plot_df["Head"] = (
-                    "L"
-                    + plot_df["layer"].astype(str)
-                    + "H"
-                    + plot_df["head"].astype(str)
-                )
+            plot_df["Head"] = (
+                "L"
+                + plot_df["layer"].astype(str)
+                + "H"
+                + plot_df["head"].astype(str)
+            )
 
-                chart = (
-                    alt.Chart(plot_df)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("Head:N", title="Attention Head"),
-                        y=alt.Y("induction_score:Q", title="Induction Score"),
-                        color=alt.Color(
-                            "layer:N",
-                            title="Layer",
-                            scale=alt.Scale(
-                                range=[
-                                    "#AEC6CF",  # pastel blue
-                                    "#FFD1DC",  # pastel pink
-                                    "#CDEAC0",  # pastel green
-                                    "#FFF1B6",  # pastel yellow
-                                    "#D7C6F7",  # lavender
-                                    "#FFDAC1",  # peach
-                                    "#B5EAD7",  # mint
-                                    "#E2CFC4",  # beige
-                                    "#C7CEEA",  # periwinkle
-                                    "#F8C8DC",  # rose
-                                    "#D5ECC2",  # sage
-                                    "#FDE2A7",  # light apricot
-                                ]
-                            ),
+            chart = (
+                alt.Chart(plot_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Head:N", title="Attention Head"),
+                    y=alt.Y("induction_score:Q", title="Induction Score"),
+                    color=alt.Color(
+                        "layer:N",
+                        title="Layer",
+                        scale=alt.Scale(
+                            range=[
+                                "#AEC6CF",  # pastel blue
+                                "#FFD1DC",  # pastel pink
+                                "#CDEAC0",  # pastel green
+                                "#FFF1B6",  # pastel yellow
+                                "#D7C6F7",  # lavender
+                                "#FFDAC1",  # peach
+                                "#B5EAD7",  # mint
+                                "#E2CFC4",  # beige
+                                "#C7CEEA",  # periwinkle
+                                "#F8C8DC",  # rose
+                                "#D5ECC2",  # sage
+                                "#FDE2A7",  # light apricot
+                            ]
                         ),
-                        tooltip=[
-                            "layer",
-                            "head",
-                            alt.Tooltip("induction_score:Q", format=".3f"),
-                            alt.Tooltip("drop:Q", format=".3f"),
-                            alt.Tooltip("attention_score:Q", format=".3f"),
-                        ],
-                    )
-                    .properties(height=450)
+                    ),
+                    tooltip=[
+                        "layer",
+                        "head",
+                        alt.Tooltip("induction_score:Q", format=".3f"),
+                        alt.Tooltip("drop:Q", format=".3f"),
+                        alt.Tooltip("attention_score:Q", format=".3f"),
+                    ],
                 )
+                .properties(height=450)
+            )
 
-                st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, use_container_width=True)
