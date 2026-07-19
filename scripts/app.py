@@ -267,7 +267,7 @@ elif page == "Induction Head Ablation":
 
             custom_position = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
 
-        if len(st.session_state.experiemnts) < 4:
+        if len(st.session_state.experiments) < 4:
             if st.sidebar.button("➕ Add experiment"):
                 st.session_state.experiments.append({
                     "source": "Random tokens",
