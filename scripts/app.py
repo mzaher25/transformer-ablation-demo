@@ -222,11 +222,13 @@ elif page == "Induction Head Ablation":
 
         exp["source"] =  st.sidebar.radio(
             "Prompt source",
-            [
+            ["Random tokens", "Natural language", "Custom prompt"],
+            index=[
                 "Random tokens",
                 "Natural language",
                 "Custom prompt"
-            ]
+            ].index(exp["source"]),
+            key=f"source_{i}"
         )
 
         custom_prompt = None
