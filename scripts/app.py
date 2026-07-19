@@ -324,7 +324,7 @@ elif page == "Induction Head Ablation":
             st.header(name)
             st.dataframe(df.head(20))
 
-            plot_df = df.head(20).copy()
+            plot_df = df.nlargest(20, "induction_score").copy()
 
             plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
 
