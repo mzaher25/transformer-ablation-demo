@@ -23,7 +23,6 @@ from transformer_ablation.induction import (
     filter_valid_examples
 )
 
-
 def set_seed(seed):
     if seed is not None:
         random.seed(seed)
@@ -209,7 +208,7 @@ elif page == "Induction Head Ablation":
     for i, exp in enumerate(st.session_state.experiments):
 
         st.sidebar.subheader(f"Experiment {i+1}")
-        
+
         exp["source"] = st.sidebar.radio("Prompt source", ["Random tokens", "Natural language", "Custom prompt"], index=["Random tokens", "Natural language", "Custom prompt"].index(exp["source"]), key=f"source_{i}")
 
         if exp["source"] == "Random tokens":
