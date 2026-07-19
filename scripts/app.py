@@ -371,7 +371,6 @@ elif page == "Induction Head Ablation":
         with st.expander("Attention Score"):
             st.write("Measures how strongly a head attends from a repeated token back to the token that followed its earlier occurrence — the token needed to complete the induction pattern.")
 
-
         with st.expander("Induction Score"):
             st.write(
                 "Computed as:\n\n"
