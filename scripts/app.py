@@ -396,8 +396,32 @@ elif page == "Induction Head Ablation":
             preview_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
 
         st.subheader("Induction Prompt Preview")
-        for ex in preview_examples[:5]:
-            st.code(f"Prompt: {ex.prompt}\nExpected continuation: {ex.answer}")
+        
+        for i, exp in enumerate(st.session_state.experiments):
+            st.markdown(f"### Experiment {i + 1}")
+            
+            if exp["source"] == "Random tokens":
+                preview_examples = generate_induction_prompts(model, num_examples=5)
+            elif exp["source"] == "Natural language":
+                preview_examples = [ex for ex in natural_examples if ex.prompt == exp["selected_prompt"]]
+                if exp["add_custom"]:
+                    preview_examples.append(InductionExample(
+                        prompt=exp["custom_prompt"],
+                        answer=exp["custom_answer"],
+                        repeat_position=1
+                    ))
+            else:
+                preview_examples = create_custom_induction_prompt(
+                    exp["custom_prompt"],
+                    exp["custom_answer"],
+                    exp["custom_position"],
+                )
+
+                for ex in preview_examples[:5]:
+                    st.code(
+                        f"Prompt: {ex.prompt}\n"
+                        f"Expected continuation: {ex.answer}"
+                    )
 
         col1, col2 = st.columns(2)
 
@@ -425,67 +449,51 @@ elif page == "Induction Head Ablation":
 
                 with st.spinner("Testing attention heads..."):
 
-                    if exp["source"] == "Random tokens":
+                    results = {}
 
-                        induction_examples = generate_induction_prompts(model, num_examples=num_examples)
+                    for idx, exp in enumerate(st.session_state.experiments):
 
+                        if exp["source"] == "Random tokens":
 
-                    elif exp["source"] == "Natural language":
-
-                        all_examples = load_induction_prompts("data/induction.json")
-
-                        induction_examples = [
-                            ex for ex in all_examples
-                            if ex.prompt == selected_prompt
-                        ]
-
-                        if add_custom:
-                            induction_examples.append(
-                                InductionExample(
-                                    prompt=custom_prompt,
-                                    answer=custom_answer
-                                )
+                            induction_examples = generate_induction_prompts(
+                                model,
+                                num_examples=exp["num_examples"]
                             )
 
-                    elif exp["source"] == "Custom prompt":
-                        induction_examples = create_custom_induction_prompt(custom_prompt, custom_answer, custom_position)
+                        elif exp["source"] == "Natural language":
 
-                    st.subheader("Results:")
+                            induction_examples = [
+                                ex for ex in natural_examples
+                                if ex.prompt == exp["selected_prompt"]
+                            ]
 
-                    ablation_df = run_head_sweep(
-                        model,
-                        induction_examples,
-                        max_layers=max_layers,
-                        max_heads=max_heads,
-                        stop_flag=lambda:
-                            st.session_state.stop_sweep,
-                        progress=update_progress
-                    )
+                            if exp["add_custom"]:
+                                induction_examples.append(
+                                    InductionExample(
+                                        prompt=exp["custom_prompt"],
+                                        answer=exp["custom_answer"],
+                                    )
+                                )
 
-                    if st.session_state.stop_sweep:
-                        st.warning("Sweep stopped!")
-                        st.stop()
+                        else:
 
-                    attention_df = run_attention_sweep(
-                        model, 
-                        induction_examples, 
-                        max_layers=max_layers, 
-                        max_heads=max_heads, 
-                        stop_flag=lambda:
-                            st.session_state.stop_sweep,
-                        progress=update_progress
-                    )
+                            induction_examples = create_custom_induction_prompt(
+                                exp["custom_prompt"],
+                                exp["custom_answer"],
+                                exp["custom_position"],
+                            )
 
-                    if st.session_state.stop_sweep:
-                        st.warning("Sweep stopped!")
-                        st.stop()
+                        ablation_df = run_head_sweep(...)
 
-                    df = ablation_df.merge(attention_df, on=["layer", "head"])
+                        attention_df = run_attention_sweep(...)
 
-                    df["induction_score"] = (df["drop"] * df["attention_score"])
-                    df = df.sort_values("induction_score", ascending=False)
+                        df = ablation_df.merge(attention_df, on=["layer", "head"])
 
-                    st.session_state["head_df"] = df
+                        df["induction_score"] = (
+                            df["drop"] * df["attention_score"]
+                        )
+
+                        results[f"Experiment {idx+1}"] = df
 
         with col2:
 
