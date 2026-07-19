@@ -287,24 +287,24 @@ elif page == "Induction Head Ablation":
 
         st.sidebar.divider()
 
-        if len(st.session_state.experiments) < 4:
-            if st.sidebar.button("➕ Add Experiment"):
-                st.session_state.experiments.append(
-                    {
-                        "source": "Random tokens",
-                        "num_examples": 50,
-                        "selected_prompt": None,
-                        "custom_prompt": "",
-                        "custom_answer": "",
-                        "custom_position": 1,
-                        "add_custom": False,
-                    }
-                )
-                st.rerun()
-
-        if st.sidebar.button("❌ Remove Latest Experiment", disabled=len(st.session_state.experiments) == 1):
-            st.session_state.experiments.pop()
+    if len(st.session_state.experiments) < 4:
+        if st.sidebar.button("➕ Add Experiment"):
+            st.session_state.experiments.append(
+                {
+                    "source": "Random tokens",
+                    "num_examples": 50,
+                    "selected_prompt": None,
+                    "custom_prompt": "",
+                    "custom_answer": "",
+                    "custom_position": 1,
+                    "add_custom": False,
+                }
+            )
             st.rerun()
+
+    if st.sidebar.button("❌ Remove Latest Experiment", disabled=len(st.session_state.experiments) == 1):
+        st.session_state.experiments.pop()
+        st.rerun()
 
     st.sidebar.divider()
 
