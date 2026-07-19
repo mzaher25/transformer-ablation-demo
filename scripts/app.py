@@ -252,7 +252,7 @@ elif page == "Induction Head Ablation":
 
             natural_examples = load_induction_prompts("data/induction.json")
 
-            prompts = [ex for ex in natural_examples if ex.prompt == exp["selected_prompt"]]
+            prompts = [ex.prompt for ex in natural_examples]
 
             default = 0
             if exp["selected_prompt"] in prompts:
