@@ -228,9 +228,6 @@ elif page == "Induction Head Ablation":
                 key=f"num_examples_{i}"
             )
 
-            st.session_state.seed = st.sidebar.number_input("Random seed", min_value=0, max_value=2**31-1, value=0, step=1, help="Same seed reproduces the same random induction examples across runs")
-
-
         elif exp["source"] == "Natural language":
 
             natural_examples = load_induction_prompts("data/induction.json")
@@ -316,6 +313,12 @@ elif page == "Induction Head Ablation":
 
 
     st.sidebar.divider()
+    st.sidebar.subheader("Randomness")
+
+    if "seed" not in st.session_state:
+        st.session_state.seed=0
+
+    st.session_state.seed = st.sidebar.number_input("Random seed", min_value=0, max_value=2**31-1, value=0, step=1, help="Same seed reproduces the same random induction examples across runs")
 
     st.sidebar.subheader("Model Sweep")
 
