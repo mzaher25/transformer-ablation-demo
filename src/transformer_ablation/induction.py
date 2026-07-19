@@ -4,19 +4,27 @@ import json
 
 from pathlib import Path
 from transformer_ablation.config import InductionExample
+from transformer_ablation.prompts import token_id_or_none
 
 # Generate a set of prompts for testing induction behavior in the model
 def generate_induction_prompts(model, num_examples=100, seq_len=5):
+
+    # Need at least A B
+    if seq_len < 2:
+        raise ValueError("seq_len must be >= 2")
 
     examples = []
 
     vocab_size = model.cfg.d_vocab
 
-    for _ in range(num_examples):
+    # Random token IDs can decode to text that doesn't re-tokenize back to a
+    # single token; retry with a generous budget rather than crashing later
+    # when induction_score() tries to read a scalar answer id.
+    max_attempts = num_examples * 20
+    attempts = 0
 
-        # Need at least A B
-        if seq_len < 2:
-            raise ValueError("seq_len must be >= 2")
+    while len(examples) < num_examples and attempts < max_attempts:
+        attempts += 1
 
         # Create the initial sequence
         tokens = torch.randint(
@@ -36,6 +44,11 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
 
         answer_token = tokens[repeat_position + 1]
 
+        answer_text = model.tokenizer.decode(answer_token.unsqueeze(0))
+
+        if token_id_or_none(model, answer_text) is None:
+            continue
+
         prompt_tokens = torch.cat(
             [
                 tokens,
@@ -48,12 +61,13 @@ def generate_induction_prompts(model, num_examples=100, seq_len=5):
                 prompt=model.tokenizer.decode(
                     prompt_tokens
                 ),
-                answer=model.tokenizer.decode(
-                    answer_token.unsqueeze(0)
-                ),
+                answer=answer_text,
                 repeat_position=repeat_position
             )
         )
+
+    if len(examples) < num_examples:
+        print(f"Warning: only generated {len(examples)}/{num_examples} valid induction examples")
 
     return examples
 
@@ -104,3 +118,18 @@ def load_induction_prompts(path):
         )
         for item in data
     ]
+
+
+def filter_valid_examples(model, examples):
+    """Drop examples whose answer isn't a single token under the model's
+    tokenizer, mirroring prompts.py's build_examples guard. induction_score()
+    needs exactly one token to read a scalar answer id."""
+    valid, skipped = [], []
+
+    for ex in examples:
+        if token_id_or_none(model, ex.answer) is None:
+            skipped.append(ex)
+        else:
+            valid.append(ex)
+
+    return valid, skipped

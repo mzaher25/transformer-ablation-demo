@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 import altair as alt
@@ -18,8 +19,15 @@ from transformer_ablation.induction import (
     generate_induction_prompts,
     generate_natural_prompts,
     create_custom_induction_prompt,
-    load_induction_prompts
+    load_induction_prompts,
+    filter_valid_examples,
 )
+
+
+def set_seed(seed):
+    if seed is not None:
+        random.seed(seed)
+        torch.manual_seed(seed)
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "default.yaml"
 ABLATION_LABELS = {
@@ -27,6 +35,7 @@ ABLATION_LABELS = {
     "whole_layer": "Whole layer (attn + MLP out)",
     "mlp_only": "MLP output only",
     "residual_stream": "Residual stream (final token)",
+    "single_head": "Single attention head",
 }
 
 PINK = "#d97ba6"
@@ -102,11 +111,17 @@ if page == "Layer Ablation":
 
     ablation_type = st.sidebar.radio("Ablation type", options=list(ABLATION_LABELS.keys()), format_func=lambda k: ABLATION_LABELS[k])
     layer = st.sidebar.slider("Layer", 0, n_layers - 1, 0, disabled=(ablation_type == "none"))
+    head = st.sidebar.slider(
+        "Head", 0, model.cfg.n_heads - 1, 0, disabled=(ablation_type != "single_head")
+    )
     top_k = st.sidebar.slider("Top-k tokens to show", 3, 15, 8)
     max_new_tokens = st.sidebar.slider("Tokens to generate", 1, 20, 8)
 
-    hooks = None if ablation_type == "none" else make_hooks(ablation_type, layer)
+    head_arg = head if ablation_type == "single_head" else None
+    hooks = None if ablation_type == "none" else make_hooks(ablation_type, layer, head=head_arg)
     ablated_label = "Baseline" if ablation_type == "none" else f"{ABLATION_LABELS[ablation_type]} @ layer {layer}"
+    if ablation_type == "single_head":
+        ablated_label += f", head {head}"
 
     st.subheader("Prompt")
     st.code(prompt_text, language=None)
@@ -177,6 +192,43 @@ elif page == "Induction Head Ablation":
 
     if "experiments" not in st.session_state:
         st.session_state.experiments = [{"source": "Random tokens", "num_examples": 50, "selected_prompt": None, "custom_prompt": "", "custom_answer": "", "custom_position": 1, "add_custom": False}]
+    st.sidebar.header("Induction Head Controls")
+
+    prompt_source = st.sidebar.radio(
+        "Prompt source",
+        [
+            "Random tokens",
+            "Natural language"
+        ]
+    )
+
+    custom_prompt = None
+    custom_answer = None
+    custom_position = None
+    selected_prompt = None
+    add_custom = False
+    seed = None
+
+    if prompt_source == "Random tokens":
+
+        num_examples = st.sidebar.number_input(
+            "Number of random induction examples",
+            min_value=5,
+            max_value=500,
+            value=50,
+            step=5
+        )
+        seed = st.sidebar.number_input(
+            "Random seed",
+            min_value=0,
+            max_value=2**31 - 1,
+            value=0,
+            step=1,
+            help="Same seed reproduces the same random induction examples across runs.",
+        )
+        st.caption(f"Showing 5 of {num_examples} randomly generated induction examples.")
+
+    elif prompt_source == "Natural language":
 
     st.sidebar.header("Induction Head Controls")
 
@@ -238,6 +290,7 @@ elif page == "Induction Head Ablation":
     max_heads = st.sidebar.number_input("Number of heads per layer to test", min_value=1, max_value=model.cfg.n_heads, value=model.cfg.n_heads, step=1)
 
     if exp["source"] == "Random tokens":
+        set_seed(seed)
         preview_examples = generate_induction_prompts(model, num_examples=5)
 
     elif exp["source"] == "Natural language":
@@ -281,6 +334,8 @@ elif page == "Induction Head Ablation":
                 results = {}
 
                 for idx, exp in enumerate(st.session_state.experiments):
+                    set_seed(seed)
+                    induction_examples = generate_induction_prompts(model, num_examples=num_examples)
 
                     def update_progress(value):
                         st.session_state.completed += 1
@@ -298,7 +353,16 @@ elif page == "Induction Head Ablation":
 
                     else:
 
-                        induction_examples = create_custom_induction_prompt(exp["custom_prompt"], exp["custom_answer"], exp["custom_position"])
+                induction_examples, skipped = filter_valid_examples(model, induction_examples)
+                if skipped:
+                    st.warning(
+                        f"Skipped {len(skipped)} example(s) whose expected continuation isn't a single token."
+                    )
+                if not induction_examples:
+                    st.error("No valid induction examples (expected continuation must be a single token).")
+                    st.stop()
+
+                st.subheader("Results:")
 
                     ablation_df = run_head_sweep(model, induction_examples, max_layers=max_layers, max_heads=max_heads, stop_flag=lambda: st.session_state.stop_sweep, progress=update_progress)
 
@@ -310,19 +374,54 @@ elif page == "Induction Head Ablation":
 
                     results[f"Experiment {idx+1}"] = df
 
-                st.session_state["results"] = results
+                # attention_score is already in [0, 1]; min-max normalize drop onto the
+                # same scale first so it doesn't dominate the product just because raw
+                # logit units have a much larger dynamic range
+                drop_range = df["drop"].max() - df["drop"].min()
+                if drop_range > 0:
+                    normalized_drop = (df["drop"] - df["drop"].min()) / drop_range
+                else:
+                    normalized_drop = df["drop"] * 0
+
+                df["induction_score"] = normalized_drop * df["attention_score"]
+                df = df.sort_values("induction_score", ascending=False)
+
+                st.session_state["head_df"] = df
 
     with col2:
 
         if st.button("Stop experiment"):
             st.session_state.stop_sweep = True
 
-    if "results" in st.session_state:
+    if "head_df" in st.session_state:
+
+        df = st.session_state["head_df"]
+        df = df.sort_values("induction_score", ascending=False)
+
+        st.dataframe(
+            df[
+                [
+                    "layer",
+                    "head",
+                    "drop",
+                    "attention_score",
+                    "induction_score"
+                ]
+            ].head(20)
+        )
 
         for name, df in st.session_state["results"].items():
 
             st.header(name)
             st.dataframe(df.head(20))
+        with st.expander("Drop"):
+                st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated")
+        with st.expander("Attention Score"):
+            st.write("Measures how strongly a head attends, from a repeated token, back to the token that came right after its earlier occurrence — the token it would need to copy to complete the induction pattern")
+        with st.expander("Induction Score"):
+            st.write("Computed as:\n\n"
+                    "**Induction Score = min-max-normalized Drop * Attention Score**\n\n"
+                     "Drop is normalized to [0, 1] first since it's in raw logit units with a much larger range than Attention Score, so it doesn't swamp the product. This combines causal importance with induction-style attention, highlighting heads that both attend to the correct token and are necessary for the model's prediction")
 
             plot_df = df.nlargest(20, "induction_score").copy()
 
