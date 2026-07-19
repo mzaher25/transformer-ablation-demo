@@ -20,7 +20,7 @@ from transformer_ablation.induction import (
     generate_natural_prompts,
     create_custom_induction_prompt,
     load_induction_prompts,
-    filter_valid_examples,
+    filter_valid_examples
 )
 
 
@@ -199,7 +199,8 @@ elif page == "Induction Head Ablation":
                 "custom_prompt": "",
                 "custom_answer": "",
                 "custom_position": 1,
-                "add_custom": False
+                "add_custom": False,
+                "seed": None
             }
         ]
 
@@ -226,6 +227,8 @@ elif page == "Induction Head Ablation":
                 step=5,
                 key=f"num_examples_{i}"
             )
+
+            st.session_state.seed = st.sidebar.number_input("Random seed", min_value=0, max_value=2**31-1, value=0, step=1, help="Same seed reproduces the same random induction examples across runs")
 
 
         elif exp["source"] == "Natural language":
@@ -414,7 +417,7 @@ elif page == "Induction Head Ablation":
                     # Generate examples based on experiment type
                     if exp["source"] == "Random tokens":
 
-                        set_seed(seed)
+                        set_seed(st.session_state.seed)
 
                         induction_examples = generate_induction_prompts(
                             model,
