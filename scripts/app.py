@@ -260,60 +260,22 @@ elif page == "Induction Head Ablation":
             if exp["selected_prompt"] in prompts:
                 default = prompts.index(exp["selected_prompt"])
 
-            exp["selected_prompt"] = st.sidebar.selectbox(
-                "Choose induction prompt",
-                prompts,
-                index=default,
-                key=f"prompt_{i}"
-            )
+            exp["selected_prompt"] = st.sidebar.selectbox("Choose induction prompt", prompts, index=default, key=f"prompt_{i}")
 
-            exp["add_custom"] = st.sidebar.checkbox(
-                "Add custom prompt",
-                value=exp["add_custom"],
-                key=f"add_custom_{i}"
-            )
+            exp["add_custom"] = st.sidebar.checkbox("Add custom prompt", value=exp["add_custom"], key=f"add_custom_{i}")
 
             if exp["add_custom"]:
 
-                exp["custom_prompt"] = st.sidebar.text_area(
-                    "Custom prompt",
-                    value=exp["custom_prompt"],
-                    key=f"custom_prompt_{i}"
-                )
+                exp["custom_prompt"] = st.sidebar.text_area("Custom prompt", value=exp["custom_prompt"], key=f"custom_prompt_{i}")
 
-                exp["custom_answer"] = st.sidebar.text_input(
-                    "Expected continuation",
-                    value=exp["custom_answer"],
-                    key=f"custom_answer_{i}"
-                )
-
-            if len(st.session_state.experiments) > 1:
-                if st.sidebar.button(
-                    "❌ Remove",
-                    key=f"remove_{i}"
-                ):
-                    st.session_state.experiments.pop(i)
-                    st.rerun()
+                exp["custom_answer"] = st.sidebar.text_input("Expected continuation", value=exp["custom_answer"], key=f"custom_answer_{i}")
 
             if add_custom:
-                exp["custom_prompt"] = st.sidebar.text_area(
-                    "Prompt",
-                    value=exp["custom_prompt"],
-                    key=f"cprompt_{i}"
-                )
+                exp["custom_prompt"] = st.sidebar.text_area("Prompt", value=exp["custom_prompt"], key=f"cprompt_{i}")
 
-                exp["custom_answer"] = st.sidebar.text_input(
-                    "Expected continuation",
-                    value=exp["custom_answer"],
-                    key=f"canswer_{i}"
-                )
+                exp["custom_answer"] = st.sidebar.text_input("Expected continuation", value=exp["custom_answer"], key=f"canswer_{i}")
 
-                exp["custom_position"] = st.sidebar.number_input(
-                    "Position of repeated token",
-                    min_value=0,
-                    value=exp["custom_position"],
-                    key=f"cposition_{i}"
-                )
+                exp["custom_position"] = st.sidebar.number_input("Position of repeated token", min_value=0, value=exp["custom_position"], key=f"cposition_{i}")
 
         elif exp["source"] == "Custom prompt":
 
@@ -323,17 +285,29 @@ elif page == "Induction Head Ablation":
 
             exp["custom_position"] = st.sidebar.number_input("Position of repeated token", min_value=0, value=1)
 
+        st.sidebar.divider()
+
         if len(st.session_state.experiments) < 4:
-            if st.sidebar.button("➕ Add experiment"):
-                st.session_state.experiments.append({
-                    "source": "Random tokens",
-                    "num_examples": 50,
-                    "selected_prompt": None,
-                    "custom_prompt": "",
-                    "custom_answer": "",
-                    "custom_position": 1,
-                    "add_custom": False
-                })
+            if st.sidebar.button("➕ Add Experiment"):
+                st.session_state.experiments.append(
+                    {
+                        "source": "Random tokens",
+                        "num_examples": 50,
+                        "selected_prompt": None,
+                        "custom_prompt": "",
+                        "custom_answer": "",
+                        "custom_position": 1,
+                        "add_custom": False,
+                    }
+                )
+                st.rerun()
+
+        if st.sidebar.button(
+            "❌ Remove Latest Experiment",
+            disabled=len(st.session_state.experiments) == 1,
+        ):
+            st.session_state.experiments.pop()
+            st.rerun()
 
         st.sidebar.divider()
 
