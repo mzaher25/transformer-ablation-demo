@@ -137,7 +137,7 @@ if page == "Layer Ablation":
 
         with torch.no_grad():
             base_logits = model(tokens)
-            ablated_logits = base_logits if hooks is None else model.run_with_hooks(tokens, fwd_hooks=hooks)
+        ablated_logits = base_logits if hooks is None else model.run_with_hooks(tokens, fwd_hooks=hooks)
 
         base_diff = logit_diff_from_logits(base_logits, selected_example.correct_id, selected_example.incorrect_id)
         ablated_diff = logit_diff_from_logits(ablated_logits, selected_example.correct_id, selected_example.incorrect_id)
@@ -273,10 +273,6 @@ elif page == "Induction Head Ablation":
             overall = len(st.session_state.experiments) * max_layers * max_heads
             st.session_state.completed = 0
             progress_bar = st.progress(0, text="Starting...")
-            
-            def update_progress(value):
-                st.session_state.completed += 1
-                progress_bar.progress(st.session_state.completed / overall, text=f"Experiment {idx+1}/{len(st.session_state.experiments)}")
 
             st.session_state.stop_sweep = False
 
@@ -285,6 +281,10 @@ elif page == "Induction Head Ablation":
                 results = {}
 
                 for idx, exp in enumerate(st.session_state.experiments):
+
+                    def update_progress(value):
+                        st.session_state.completed += 1
+                        progress_bar.progress(st.session_state.completed / overall, text=f"Experiment {idx+1}/{len(st.session_state.experiments)}")
 
                     if exp["source"] == "Random tokens":
                         induction_examples = generate_induction_prompts(model, num_examples=exp["num_examples"])

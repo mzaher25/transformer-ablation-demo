@@ -1,5 +1,6 @@
 import torch
 import pandas as pd
+import streamlit as st
 
 
 def logit_diff_from_logits(logits, correct_id: int, incorrect_id: int) -> float:
@@ -49,29 +50,28 @@ def generate_continuation(model, prompt: str, hooks=None, max_new_tokens: int = 
 
 def induction_score(model, examples, hooks=None):
 
-    prompts = [ex.prompt for ex in examples]
+    scores = []
 
-    tokens = model.to_tokens(prompts, padding_side="right")
+    for ex in examples:
 
-    pad_id = model.tokenizer.pad_token_id
-    if pad_id is None:
-        pad_id = model.tokenizer.eos_token_id
+        tokens = model.to_tokens(ex.prompt)
 
-    lengths = (tokens != pad_id).sum(dim=1)
+        answer_token = model.to_tokens(ex.answer, prepend_bos=False)
+        answer_id = answer_token.item()
 
-    answer_ids = torch.tensor([model.to_tokens(ex.answer, prepend_bos=False).item() for ex in examples])
+        with torch.no_grad():
+            if hooks:
+                logits = model.run_with_hooks(tokens, fwd_hooks=hooks)
+            else:
+                logits = model(tokens)
 
-    with torch.no_grad():
-        if hooks is None:
-            logits = model(tokens)
-        else:
-            logits = model.run_with_hooks(tokens, fwd_hooks=hooks)
+        final_logits = logits[0, -1]
 
-    batch_idx = torch.arange(len(examples), device=tokens.device)
-    final_logits = logits[batch_idx, lengths - 1 :]
-    scores = final_logits[batch_idx, answer_ids]
+        score = final_logits[answer_id]
 
-    return scores.mean().item()
+        scores.append(score.item())
+
+    return sum(scores) / len(scores)
 
 def induction_attention_score(model, examples, max_layers=None, max_heads=None):
 
