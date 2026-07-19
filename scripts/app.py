@@ -209,24 +209,11 @@ elif page == "Induction Head Ablation":
     for i, exp in enumerate(st.session_state.experiments):
 
         st.sidebar.subheader(f"Experiment {i+1}")
-
-        exp["source"] = st.sidebar.radio(
-            "Prompt source",
-            ["Random tokens", "Natural language", "Custom prompt"],
-            index=["Random tokens", "Natural language", "Custom prompt"].index(exp["source"]),
-            key=f"source_{i}"
-        )
+        
+        exp["source"] = st.sidebar.radio("Prompt source", ["Random tokens", "Natural language", "Custom prompt"], index=["Random tokens", "Natural language", "Custom prompt"].index(exp["source"]), key=f"source_{i}")
 
         if exp["source"] == "Random tokens":
-
-            exp["num_examples"] = st.sidebar.number_input(
-                "Number of random induction examples",
-                min_value=5,
-                max_value=500,
-                value=exp["num_examples"],
-                step=5,
-                key=f"num_examples_{i}"
-            )
+            exp["num_examples"] = st.sidebar.number_input("Number of random induction examples", min_value=5, max_value=500, value=exp["num_examples"], step=5, key=f"num_examples_{i}")
 
         elif exp["source"] == "Natural language":
 
@@ -237,80 +224,27 @@ elif page == "Induction Head Ablation":
             if exp["selected_prompt"] in prompts:
                 default = prompts.index(exp["selected_prompt"])
 
-            exp["selected_prompt"] = st.sidebar.selectbox(
-                "Choose induction prompt",
-                prompts,
-                index=default,
-                key=f"prompt_{i}"
-            )
-
-            exp["add_custom"] = st.sidebar.checkbox(
-                "Add custom prompt",
-                value=exp["add_custom"],
-                key=f"add_custom_{i}"
-            )
+            exp["selected_prompt"] = st.sidebar.selectbox("Choose induction prompt", prompts, index=default, key=f"prompt_{i}")
+            exp["add_custom"] = st.sidebar.checkbox("Add custom prompt", value=exp["add_custom"], key=f"add_custom_{i}")
 
             if exp["add_custom"]:
-
-                exp["custom_prompt"] = st.sidebar.text_area(
-                    "Custom prompt",
-                    value=exp["custom_prompt"],
-                    key=f"custom_prompt_{i}"
-                )
-
-                exp["custom_answer"] = st.sidebar.text_input(
-                    "Expected continuation",
-                    value=exp["custom_answer"],
-                    key=f"custom_answer_{i}"
-                )
-
+                exp["custom_prompt"] = st.sidebar.text_area("Custom prompt", value=exp["custom_prompt"], key=f"custom_prompt_{i}")
+                exp["custom_answer"] = st.sidebar.text_input("Expected continuation", value=exp["custom_answer"], key=f"custom_answer_{i}")
 
         elif exp["source"] == "Custom prompt":
-
-            exp["custom_prompt"] = st.sidebar.text_area(
-                "Prompt",
-                value=exp["custom_prompt"],
-                key=f"cprompt_{i}"
-            )
-
-            exp["custom_answer"] = st.sidebar.text_input(
-                "Expected continuation",
-                value=exp["custom_answer"],
-                key=f"canswer_{i}"
-            )
-
-            exp["custom_position"] = st.sidebar.number_input(
-                "Position of repeated token",
-                min_value=0,
-                value=exp["custom_position"],
-                key=f"cposition_{i}"
-            )
-
+            exp["custom_prompt"] = st.sidebar.text_area("Prompt", value=exp["custom_prompt"], key=f"cprompt_{i}")
+            exp["custom_answer"] = st.sidebar.text_input("Expected continuation", value=exp["custom_answer"], key=f"canswer_{i}")
+            exp["custom_position"] = st.sidebar.number_input("Position of repeated token", min_value=0, value=exp["custom_position"], key=f"cposition_{i}")
 
     if len(st.session_state.experiments) < 4:
 
         if st.sidebar.button("➕ Add Experiment"):
-            st.session_state.experiments.append(
-                {
-                    "source": "Random tokens",
-                    "num_examples": 50,
-                    "selected_prompt": None,
-                    "custom_prompt": "",
-                    "custom_answer": "",
-                    "custom_position": 1,
-                    "add_custom": False
-                }
-            )
+            st.session_state.experiments.append({"source": "Random tokens", "num_examples": 50, "selected_prompt": None, "custom_prompt": "", "custom_answer": "", "custom_position": 1, "add_custom": False})
             st.rerun()
 
-
-    if st.sidebar.button(
-        "❌ Remove Latest Experiment",
-        disabled=len(st.session_state.experiments) == 1
-    ):
+    if st.sidebar.button("❌ Remove Latest Experiment", disabled=len(st.session_state.experiments) == 1):
         st.session_state.experiments.pop()
         st.rerun()
-
 
     st.sidebar.divider()
     st.sidebar.subheader("Randomness")
@@ -322,24 +256,11 @@ elif page == "Induction Head Ablation":
 
     st.sidebar.subheader("Model Sweep")
 
-    max_layers = st.sidebar.number_input(
-        "Number of layers to test",
-        min_value=1,
-        max_value=model.cfg.n_layers,
-        value=model.cfg.n_layers
-    )
-
-    max_heads = st.sidebar.number_input(
-        "Number of heads per layer to test",
-        min_value=1,
-        max_value=model.cfg.n_heads,
-        value=model.cfg.n_heads
-    )
-
+    max_layers = st.sidebar.number_input("Number of layers to test", min_value=1, max_value=model.cfg.n_layers, value=model.cfg.n_layers)
+    max_heads = st.sidebar.number_input("Number of heads per layer to test", min_value=1, max_value=model.cfg.n_heads, value=model.cfg.n_heads)
 
     st.subheader("Induction Prompt Preview")
     st.caption("Showing top 5 prompts for each experiment")
-
 
     for i, exp in enumerate(st.session_state.experiments):
 
@@ -347,45 +268,21 @@ elif page == "Induction Head Ablation":
 
         if exp["source"] == "Random tokens":
 
-            preview_examples = generate_induction_prompts(
-                model,
-                num_examples=5
-            )
-
+            preview_examples = generate_induction_prompts(model, num_examples=5)
 
         elif exp["source"] == "Natural language":
 
             natural_examples = load_induction_prompts("data/induction.json")
-
-            preview_examples = [
-                ex for ex in natural_examples
-                if ex.prompt == exp["selected_prompt"]
-            ]
+            preview_examples = [ex for ex in natural_examples if ex.prompt == exp["selected_prompt"]]
 
             if exp["add_custom"]:
-                preview_examples.append(
-                    InductionExample(
-                        prompt=exp["custom_prompt"],
-                        answer=exp["custom_answer"]
-                    )
-                )
-
+                preview_examples.append(InductionExample(prompt=exp["custom_prompt"], answer=exp["custom_answer"]))
 
         else:
-
-            preview_examples = create_custom_induction_prompt(
-                exp["custom_prompt"],
-                exp["custom_answer"],
-                exp["custom_position"]
-            )
-
+            preview_examples = create_custom_induction_prompt(exp["custom_prompt"], exp["custom_answer"], exp["custom_position"])
 
         for ex in preview_examples[:5]:
-
-            st.code(
-                f"Prompt: {ex.prompt}\n"
-                f"Expected continuation: {ex.answer}"
-            )
+            st.code(f"Prompt: {ex.prompt}\n" f"Expected continuation: {ex.answer}")
 
     col1, col2 = st.columns(2)
 
@@ -398,10 +295,7 @@ elif page == "Induction Head Ablation":
             st.session_state.completed = 0
             st.session_state.stop_sweep = False
 
-            progress_bar = st.progress(
-                0,
-                text="Starting..."
-            )
+            progress_bar = st.progress(0, text="Starting...")
 
             with st.spinner("Testing attention heads..."):
 
@@ -412,186 +306,74 @@ elif page == "Induction Head Ablation":
 
                     def update_progress(value):
                         st.session_state.completed += 1
-                        progress_bar.progress(
-                            st.session_state.completed / overall,
-                            text=f"Experiment {idx+1}/{len(st.session_state.experiments)}"
-                        )
-
+                        progress_bar.progress(st.session_state.completed / overall, text=f"Experiment {idx+1}/{len(st.session_state.experiments)}")
 
                     # Generate examples based on experiment type
                     if exp["source"] == "Random tokens":
 
                         set_seed(st.session_state.seed)
-
-                        induction_examples = generate_induction_prompts(
-                            model,
-                            num_examples=exp["num_examples"]
-                        )
-
+                        induction_examples = generate_induction_prompts(model, num_examples=exp["num_examples"])
 
                     elif exp["source"] == "Natural language":
-
-                        natural_examples = load_induction_prompts(
-                            "data/induction.json"
-                        )
-
-                        induction_examples = [
-                            ex for ex in natural_examples
-                            if ex.prompt == exp["selected_prompt"]
-                        ]
+                        natural_examples = load_induction_prompts("data/induction.json")
+                        induction_examples = [ex for ex in natural_examples if ex.prompt == exp["selected_prompt"]]
 
                         if exp["add_custom"]:
-
-                            induction_examples.append(
-                                InductionExample(
-                                    prompt=exp["custom_prompt"],
-                                    answer=exp["custom_answer"]
-                                )
-                            )
-
+                            induction_examples.append(InductionExample(prompt=exp["custom_prompt"], answer=exp["custom_answer"]))
 
                     else:
-
-                        induction_examples = create_custom_induction_prompt(
-                            exp["custom_prompt"],
-                            exp["custom_answer"],
-                            exp["custom_position"]
-                        )
-
+                        induction_examples = create_custom_induction_prompt(exp["custom_prompt"], exp["custom_answer"], exp["custom_position"])
 
                     # Remove invalid examples
-                    induction_examples, skipped = filter_valid_examples(
-                        model,
-                        induction_examples
-                    )
-
+                    induction_examples, skipped = filter_valid_examples(model, induction_examples)
 
                     if skipped:
-
-                        st.warning(
-                            f"Skipped {len(skipped)} example(s) whose expected continuation isn't a single token."
-                        )
-
+                        st.warning(f"Skipped {len(skipped)} example(s) whose expected continuation isn't a single token.")
 
                     if not induction_examples:
-
-                        st.error(
-                            "No valid induction examples (expected continuation must be a single token)."
-                        )
-
+                        st.error("No valid induction examples (expected continuation must be a single token).")
                         st.stop()
 
                     # Run sweeps
-                    ablation_df = run_head_sweep(
-                        model,
-                        induction_examples,
-                        max_layers=max_layers,
-                        max_heads=max_heads,
-                        stop_flag=lambda: st.session_state.stop_sweep,
-                        progress=update_progress
-                    )
+                    ablation_df = run_head_sweep(model, induction_examples, max_layers=max_layers, max_heads=max_heads, stop_flag=lambda: st.session_state.stop_sweep, progress=update_progress)
+                    attention_df = run_attention_sweep(model, induction_examples, max_layers=max_layers, max_heads=max_heads, stop_flag=lambda: st.session_state.stop_sweep, progress=update_progress)
 
-
-                    attention_df = run_attention_sweep(
-                        model,
-                        induction_examples,
-                        max_layers=max_layers,
-                        max_heads=max_heads,
-                        stop_flag=lambda: st.session_state.stop_sweep,
-                        progress=update_progress
-                    )
-
-
-                    df = ablation_df.merge(
-                        attention_df,
-                        on=["layer", "head"]
-                    )
-
-
-                    df["induction_score"] = (
-                        df["drop"] *
-                        df["attention_score"]
-                    )
-
-
+                    df = ablation_df.merge(attention_df, on=["layer", "head"])
+                    df["induction_score"] = (df["drop"] * df["attention_score"])
                     results[f"Experiment {idx+1}"] = df
-
 
                 # Normalize final results after all experiments complete
                 for name, df in results.items():
-
-                    drop_range = (
-                        df["drop"].max()
-                        -
-                        df["drop"].min()
-                    )
-
+                    drop_range = (df["drop"].max() - df["drop"].min())
 
                     if drop_range > 0:
-
-                        normalized_drop = (
-                            df["drop"] - df["drop"].min()
-                        ) / drop_range
+                        normalized_drop = (df["drop"] - df["drop"].min()) / drop_range
 
                     else:
-
                         normalized_drop = df["drop"] * 0
 
-
-                    df["induction_score"] = (
-                        normalized_drop *
-                        df["attention_score"]
-                    )
-
-
-                    results[name] = df.sort_values(
-                        "induction_score",
-                        ascending=False
-                    )
+                    df["induction_score"] = (normalized_drop * df["attention_score"])
+                    results[name] = df.sort_values("induction_score", ascending=False)
 
                 st.session_state["results"] = results
 
     with col2:
-
         if st.button("Stop experiment"):
-
             st.session_state.stop_sweep = True
 
     if "results" in st.session_state:
-
         for name, exp_df in st.session_state["results"].items():
-
             st.header(name)
-
-            st.dataframe(
-                exp_df[
-                    [
-                        "layer",
-                        "head",
-                        "drop",
-                        "attention_score",
-                        "induction_score"
-                    ]
-                ].head(20)
-            )
-
+            st.dataframe(exp_df[["layer", "head", "drop", "attention_score", "induction_score"]].head(20))
 
         with st.expander("Drop"):
-
-            st.write(
-                "Measures how much the model's induction performance decreases when a particular attention head is ablated."
-            )
-
+            st.write("Measures how much the model's induction performance decreases when a particular attention head is ablated.")
 
         with st.expander("Attention Score"):
-
-            st.write(
-                "Measures how strongly a head attends from a repeated token back to the token that followed its earlier occurrence — the token needed to complete the induction pattern."
-            )
+            st.write("Measures how strongly a head attends from a repeated token back to the token that followed its earlier occurrence — the token needed to complete the induction pattern.")
 
 
         with st.expander("Induction Score"):
-
             st.write(
                 "Computed as:\n\n"
                 "**Induction Score = min-max-normalized Drop * Attention Score**\n\n"
@@ -599,23 +381,14 @@ elif page == "Induction Head Ablation":
                 "This combines causal importance with induction-style attention."
             )
 
-
         # Graphs
         for name, exp_df in st.session_state["results"].items():
 
             st.subheader(f"{name} Top Induction Heads")
 
-            plot_df = exp_df.nlargest(
-                20,
-                "induction_score"
-            ).copy()
+            plot_df = exp_df.nlargest(20, "induction_score" ).copy()
 
-            plot_df["Head"] = (
-                "L"
-                + plot_df["layer"].astype(str)
-                + "H"
-                + plot_df["head"].astype(str)
-            )
+            plot_df["Head"] = ("L" + plot_df["layer"].astype(str) + "H" + plot_df["head"].astype(str))
 
             chart = (
                 alt.Chart(plot_df)
@@ -623,11 +396,7 @@ elif page == "Induction Head Ablation":
                 .encode(
                     x=alt.X("Head:N", title="Attention Head"),
                     y=alt.Y("induction_score:Q", title="Induction Score"),
-                    color=alt.Color(
-                        "layer:N",
-                        title="Layer",
-                        scale=alt.Scale(range=LAYER_COLORS)
-                    ),
+                    color=alt.Color("layer:N", title="Layer", scale=alt.Scale(range=LAYER_COLORS)),
                     tooltip=[
                         "layer",
                         "head",
@@ -639,7 +408,4 @@ elif page == "Induction Head Ablation":
                 .properties(height=450)
             )
 
-            st.altair_chart(
-                chart,
-                use_container_width=True
-            )
+            st.altair_chart(chart, use_container_width=True)
