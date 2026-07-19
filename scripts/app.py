@@ -406,6 +406,7 @@ elif page == "Induction Head Ablation":
             with st.spinner("Testing attention heads..."):
 
                 results = {}
+                st.subheader("Results:")
 
                 for idx, exp in enumerate(st.session_state.experiments):
 
@@ -480,10 +481,6 @@ elif page == "Induction Head Ablation":
 
                         st.stop()
 
-
-                    st.subheader("Results:")
-
-
                     # Run sweeps
                     ablation_df = run_head_sweep(
                         model,
@@ -552,12 +549,7 @@ elif page == "Induction Head Ablation":
                         ascending=False
                     )
 
-
                 st.session_state["results"] = results
-
-                # Store first experiment for plotting
-                st.session_state["head_df"] = list(results.values())[0]
-
 
     with col2:
 
@@ -565,35 +557,23 @@ elif page == "Induction Head Ablation":
 
             st.session_state.stop_sweep = True
 
-
-
-    if "head_df" in st.session_state:
-
-        df = st.session_state["head_df"]
-
-        df = df.sort_values(
-            "induction_score",
-            ascending=False
-        )
-
-
-        st.dataframe(
-            df[
-                [
-                    "layer",
-                    "head",
-                    "drop",
-                    "attention_score",
-                    "induction_score"
-                ]
-            ].head(20)
-        )
-
+    if "results" in st.session_state:
 
         for name, exp_df in st.session_state["results"].items():
 
             st.header(name)
-            st.dataframe(exp_df.head(20))
+
+            st.dataframe(
+                exp_df[
+                    [
+                        "layer",
+                        "head",
+                        "drop",
+                        "attention_score",
+                        "induction_score"
+                    ]
+                ].head(20)
+            )
 
 
         with st.expander("Drop"):
@@ -620,52 +600,46 @@ elif page == "Induction Head Ablation":
             )
 
 
-        plot_df = df.nlargest(
-            20,
-            "induction_score"
-        ).copy()
+        # Graphs
+        for name, exp_df in st.session_state["results"].items():
 
+            st.subheader(f"{name} Top Induction Heads")
 
-        plot_df["Head"] = (
-            "L"
-            + plot_df["layer"].astype(str)
-            + "H"
-            + plot_df["head"].astype(str)
-        )
+            plot_df = exp_df.nlargest(
+                20,
+                "induction_score"
+            ).copy()
 
-
-        chart = (
-            alt.Chart(plot_df)
-            .mark_bar()
-            .encode(
-                x=alt.X(
-                    "Head:N",
-                    title="Attention Head"
-                ),
-                y=alt.Y(
-                    "induction_score:Q",
-                    title="Induction Score"
-                ),
-                color=alt.Color(
-                    "layer:N",
-                    title="Layer",
-                    scale=alt.Scale(range=LAYER_COLORS)
-                ),
-                tooltip=[
-                    "layer",
-                    "head",
-                    alt.Tooltip("induction_score:Q", format=".3f"),
-                    alt.Tooltip("drop:Q", format=".3f"),
-                    alt.Tooltip("attention_score:Q", format=".3f")
-                ],
+            plot_df["Head"] = (
+                "L"
+                + plot_df["layer"].astype(str)
+                + "H"
+                + plot_df["head"].astype(str)
             )
-            .properties(
-                height=450
+
+            chart = (
+                alt.Chart(plot_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Head:N", title="Attention Head"),
+                    y=alt.Y("induction_score:Q", title="Induction Score"),
+                    color=alt.Color(
+                        "layer:N",
+                        title="Layer",
+                        scale=alt.Scale(range=LAYER_COLORS)
+                    ),
+                    tooltip=[
+                        "layer",
+                        "head",
+                        alt.Tooltip("induction_score:Q", format=".3f"),
+                        alt.Tooltip("drop:Q", format=".3f"),
+                        alt.Tooltip("attention_score:Q", format=".3f")
+                    ],
+                )
+                .properties(height=450)
             )
-        )
 
-
-        st.altair_chart(
-            chart,
-            use_container_width=True
-        )
+            st.altair_chart(
+                chart,
+                use_container_width=True
+            )
