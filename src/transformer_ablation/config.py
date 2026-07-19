@@ -4,21 +4,6 @@ from typing import Optional
 
 import yaml
 
-COLORS = range=[
-            "#AEC6CF",  # pastel blue
-            "#FFD1DC",  # pastel pink
-            "#CDEAC0",  # pastel green
-            "#FFF1B6",  # pastel yellow
-            "#D7C6F7",  # lavender
-            "#FFDAC1",  # peach
-            "#B5EAD7",  # mint
-            "#E2CFC4",  # beige
-            "#C7CEEA",  # periwinkle
-            "#F8C8DC",  # rose
-            "#D5ECC2",  # sage
-            "#FDE2A7",  # light apricot
-        ]
-
 @dataclass
 class AblationConfig:
     model_name: str

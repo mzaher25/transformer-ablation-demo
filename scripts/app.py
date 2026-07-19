@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 import torch
 
-from transformer_ablation.config import load_config, COLORS
+from transformer_ablation.config import load_config
 from transformer_ablation.diagram import architecture_diagram_svg
 from transformer_ablation.experiment import run_ablation_sweep, run_head_sweep, run_attention_sweep
 from transformer_ablation.hooks import make_hooks
@@ -31,6 +31,20 @@ ABLATION_LABELS = {
 
 PINK = "#d97ba6"
 GOLD = "#c9992e"
+LAYER_COLORS = [
+            "#AEC6CF",  # pastel blue
+            "#FFD1DC",  # pastel pink
+            "#CDEAC0",  # pastel green
+            "#FFF1B6",  # pastel yellow
+            "#D7C6F7",  # lavender
+            "#FFDAC1",  # peach
+            "#B5EAD7",  # mint
+            "#E2CFC4",  # beige
+            "#C7CEEA",  # periwinkle
+            "#F8C8DC",  # rose
+            "#D5ECC2",  # sage
+            "#FDE2A7",  # light apricot
+        ]
 
 st.set_page_config(page_title="Transformer Ablation Demo", layout="wide")
 
@@ -171,7 +185,10 @@ elif page == "Induction Head Ablation":
 
         exp["source"] =  st.sidebar.radio("Prompt source", ["Random tokens", "Natural language", "Custom prompt"], index=["Random tokens", "Natural language", "Custom prompt"].index(exp["source"]), key=f"source_{i}")
 
-        custom_prompt, custom_answer, custom_position, selected_prompt = None
+        custom_prompt = None
+        custom_answer = None
+        custom_position = None
+        selected_prompt = None
         add_custom = False
 
         if exp["source"] == "Random tokens":
@@ -318,7 +335,7 @@ elif page == "Induction Head Ablation":
                 .encode(
                     x=alt.X("Head:N", title="Attention Head"),
                     y=alt.Y("induction_score:Q", title="Induction Score"),
-                    color=alt.Color("layer:N", title="Layer", scale=alt.Scale(COLORS)),
+                    color=alt.Color("layer:N", title="Layer", scale=alt.Scale(range=LAYER_COLORS)),
                     tooltip=["layer", "head", alt.Tooltip("induction_score:Q", format=".3f"), alt.Tooltip("drop:Q", format=".3f"), alt.Tooltip("attention_score:Q", format=".3f")],
                 ).properties(height=450)
             )
