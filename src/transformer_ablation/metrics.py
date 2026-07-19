@@ -49,30 +49,29 @@ def generate_continuation(model, prompt: str, hooks=None, max_new_tokens: int = 
 
 def induction_score(model, examples, hooks=None):
 
-    scores = []
+    prompts = [ex.prompt for ex in examples]
 
-    for ex in examples:
+    tokens = model.to_tokens(prompts, padding_side="right")
 
-        tokens = model.to_tokens(ex.prompt)
+    pad_id = model.tokenizer.pad_token_id
+    if pad_id is None:
+        pad_id = model.tokenizer.eos_token_id
 
-        answer_token = model.to_tokens(ex.answer, prepend_bos=False)
+    lengths = (tokens != pad_id).sum(dum=1)
 
-        answer_id = answer_token.item()
+    answer_ids = torch.tensor([model.to_tokens(ex.answer, prepend_bos=False).item() for ex in examples])
 
-        with torch.no_grad():
+    with torch.no_grad():
+        if hooks is None:
+            logits = model(tokens)
+        else:
+            logits = model.run_with_hooks(tokens, fwd_hooks=hooks)
 
-            if hooks:
-                logits = model.run_with_hooks(tokens, fwd_hooks=hooks)
-            else:
-                logits = model(tokens)
+    batch_idx = torch.arange(len(examples), device=tokens.device)
+    final_logits = logits[batch_idx, lengths - 1 :]
+    scores = final_logits[batch_idx, answer_ids]
 
-        final_logits = logits[0, -1]
-
-        score = final_logits[answer_id]
-
-        scores.append(score.item())
-
-    return sum(scores) / len(scores)
+    return scores.mean().item()
 
 def induction_attention_score(model, examples, max_layers=None, max_heads=None):
 
